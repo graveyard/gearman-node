@@ -19,5 +19,6 @@
     "mocha": "~1.2.2"
   },
   "scripts": {
+    "test": "node_modules/mocha/bin/mocha test/test.coffee"
   }
 }

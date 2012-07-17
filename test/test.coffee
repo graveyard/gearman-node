@@ -1,31 +1,31 @@
-Gearman = require("../lib/gearman")
-testCase = require("nodeunit").testCase
-gearman = new Gearman("localhost")
-exports["Test Connection"] =
-  "Check Instance": (test) ->
-    test.expect 1
-    test.ok gearman instanceof Gearman, "Instance created"
-    test.done()
+assert  = require 'assert'
+Gearman = require '../index'
 
-  "Connect to Server": (test) ->
-    test.expect 1
+gearman = new Gearman('localhost')
+
+describe 'test connection', ->
+  gearman = null
+  before () ->
+    gearman = new Gearman('localhost')
+
+  it 'instantiates Gearman class', ->
+    assert gearman instanceof Gearman, 'instance not created'
+
+  it 'connect to server', (done) ->
     gearman.connect()
-    gearman.on "error", (e) ->
-      test.ok false, "Should not occur"
-      test.done()
+    gearman.on 'error', (e) ->
+      assert false, 'error connecting'
+      done()
+    gearman.on 'connect', ->
+      done()
 
-    gearman.on "connect", ->
-      test.ok 1, "Connected to server"
-      test.done()
-
-  "Close connection": (test) ->
-    test.expect 1
-    gearman.on "close", ->
-      test.ok 1, "Connection closed"
-      test.done()
-
+  it 'closes connection', (done) ->
+    gearman.on 'close', ->
+      done()
     gearman.close()
 
+
+###
 exports["Worker and Client"] =
   setUp: (callback) ->
     @gearman = new Gearman("localhost")
