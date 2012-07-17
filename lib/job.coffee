@@ -1,7 +1,7 @@
 Stream = require("stream").Stream
 
 class Job extends Stream
-  constructor: (@gearman, @name, @payload) ->
+  constructor: (@gearman, @name, @payload, @cb) ->
     @timeoutTimer = null
     @gearman.sendCommand "SUBMIT_JOB", @name, false, @payload, @receiveHandle.bind @
 
@@ -32,8 +32,10 @@ class Job extends Stream
   receiveHandle: (handle) ->
     if not handle
       @emit "error", new Error("Invalid response from server")
+      @cb "ERROR: Invalid response from server"
       return
     @handle = handle
     @gearman.currentJobs[handle] = @
+    @cb()
 
 module.exports = Job
