@@ -102,7 +102,7 @@ class Gearman extends Stream
     WORK_FAIL: [ "string" ]
     WORK_STATUS: [ "string", "number", "number" ]
 
-  connect = ->
+  connect: ->
     if @connected or @connecting
       @processCommandQueue()  if @connected and not @processing
       return false
@@ -122,7 +122,7 @@ class Gearman extends Stream
     @socket.on "error", @errorHandler.bind(this)
     @socket.on "data", @receive.bind(this)
 
-  close = ->
+  close: ->
     if @connected
       @closeConnection()
       @emit "close"
