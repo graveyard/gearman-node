@@ -268,7 +268,7 @@ class Gearman extends Stream
     delete @currentJobs[handle]
     return if job.aborted
     clearTimeout job.timeoutTimer
-    job.emit "data", payload  if payload
+    job.emit "data", payload if payload
     job.emit "end"
 
   receive_JOB_ASSIGN: (handle, name, payload) ->
