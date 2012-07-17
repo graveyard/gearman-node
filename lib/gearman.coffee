@@ -53,7 +53,7 @@ class Gearman extends Stream
     SUBMIT_JOB_SCHED: 35
     SUBMIT_JOB_EPOCH: 36
 
-  @packetTypesReversed =
+  @packetTypesReversed:
     1: "CAN_DO"
     2: "CANT_DO"
     3: "RESET_ABILITIES"
@@ -103,24 +103,31 @@ class Gearman extends Stream
     WORK_STATUS: [ "string", "number", "number" ]
 
   connect: ->
+    if @connected and not @processing
+      @processCommandQueue()
     if @connected or @connecting
-      @processCommandQueue()  if @connected and not @processing
       return false
     @connecting = true
-    console.log "connecting..."  if @debug
-    @socket = (netlib.connect or netlib.createConnection)(@port, @host)
+
+    console.log "connecting..." if @debug
+
+    @socket = (netlib.connect or netlib.createConnection) @port, @host
+    
     @socket.on "connect", (->
       @socket.setKeepAlive true
       @connecting = false
       @connected = true
-      console.log "connected!"  if @debug
+
+      console.log "connected!" if @debug
+
       @emit "connect"
       @processCommandQueue()
-    ).bind(this)
-    @socket.on "end", @close.bind(this)
-    @socket.on "close", @close.bind(this)
-    @socket.on "error", @errorHandler.bind(this)
-    @socket.on "data", @receive.bind(this)
+    ).bind(@)
+
+    @socket.on "end", @close.bind @
+    @socket.on "close", @close.bind @
+    @socket.on "error", @errorHandler.bind @
+    @socket.on "data", @receive.bind @
 
   close: ->
     if @connected
@@ -136,14 +143,14 @@ class Gearman extends Stream
       @connected = false
       @connecting = false
       for i of @currentJobs
-        if @currentJobs.hasOwnProperty(i)
+        if @currentJobs.hasOwnProperty i
           if @currentJobs[i]
             @currentJobs[i].abort()
-            @currentJobs[i].emit "error", new Error("Job failed")
+            @currentJobs[i].emit "error", new Error "Job failed"
           delete @currentJobs[i]
       for i of @currentWorkers
-        if @currentWorkers.hasOwnProperty(i)
-          @currentWorkers[i].finished = true  if @currentWorkers[i]
+        if @currentWorkers.hasOwnProperty i
+          @currentWorkers[i].finished = true if @currentWorkers[i]
           delete @currentWorkers[i]
       @init()
 
@@ -156,23 +163,18 @@ class Gearman extends Stream
     if @commandQueue.length
       @processing = true
       command = @commandQueue.shift()
-      @sendCommandToServer.apply this, command
-    else
-      @processing = false
+      @sendCommandToServer.apply @, command
+      return
+    @processing = false
 
   sendCommand: ->
-    command = Array::slice.call(arguments)
+    command = Array::slice.call arguments
     @commandQueue.push command
-    @processCommandQueue()  unless @processing
+    @processCommandQueue() unless @processing
 
   sendCommandToServer: ->
-    body = undefined
-    args = Array::slice.call(arguments)
-    commandName = undefined
-    commandId = undefined
-    commandCallback = undefined
-    i = undefined
-    len = undefined
+    args = Array::slice.call arguments
+    body = commandName = commandId = commandCallback = i = len = undefined
     bodyLength = 0
     curpos = 12
     unless @connected
@@ -188,11 +190,11 @@ class Gearman extends Stream
     len = args.length
 
     while i < len
-      args[i] = new Buffer((args[i] or "").toString(), "utf-8")  unless args[i] instanceof Buffer
+      args[i] = new Buffer (args[i] or "").toString(), "utf-8" unless args[i] instanceof Buffer
       bodyLength += args[i].length
       i++
-    bodyLength += (if args.length > 1 then args.length - 1 else 0)
-    body = new Buffer(bodyLength + 12)
+    bodyLength += if args.length > 1 then args.length - 1 else 0
+    body = new Buffer bodyLength + 12
     body.writeUInt32BE 0x00524551, 0
     body.writeUInt32BE commandId, 4
     body.writeUInt32BE bodyLength, 8
@@ -205,47 +207,43 @@ class Gearman extends Stream
       body[curpos++] = 0x00  if i < args.length - 1
       i++
     if @debug
-      console.log "Sending: " + commandName + " with " + args.length + " params"
-      console.log " - ", body
+      console.log "Sending: #{commandName} with #{args.length} params"
+      console.log " - #{body}"
       args.forEach (arg, i) ->
-        console.log "  - ARG:" + i + " ", arg.toString()
-    @socket.write body, @processCommandQueue.bind(this)
+        console.log "  - ARG:#{i} #{arg.toString()}"
+    @socket.write body, @processCommandQueue.bind @
 
   receive: (chunk) ->
-    data = new Buffer((chunk and chunk.length or 0) + (@remainder and @remainder.length or 0))
-    commandId = undefined
-    commandName = undefined
+    data = (new Buffer (chunk and chunk.length or 0) + (@remainder and @remainder.length or 0))
+    curpos = argpos = len = i = curarg = argTypes = commandName = commandId = undefined
     bodyLength = 0
     args = []
-    argTypes = undefined
-    curarg = undefined
-    i = undefined
-    len = undefined
-    argpos = undefined
-    curpos = undefined
     return  unless data.length
+
     if @remainder
       @remainder.copy data, 0, 0
       chunk.copy data, @remainder.length, 0  if chunk
     else
       data = chunk
+
     if data.length < 12
       @remainder = data
       return
-    return @errorHandler(new Error("Out of sync with server"))  unless data.readUInt32BE(0) is 0x00524553
-    bodyLength = data.readUInt32BE(8)
+
+    return @errorHandler new Error "Out of sync with server" unless data.readUInt32BE(0) is 0x00524553
+    bodyLength = data.readUInt32BE 8
     if data.length < 12 + bodyLength
       @remainder = data
       return
     if data.length > 12 + bodyLength
-      @remainder = data.slice(12 + bodyLength)
-      data = data.slice(0, 12 + bodyLength)
+      @remainder = data.slice 12 + bodyLength
+      data = data.slice 0, 12 + bodyLength
     else
       @remainder = false
-    commandId = data.readUInt32BE(4)
-    commandName = (Gearman.packetTypesReversed[commandId] or "")
+    commandId = data.readUInt32BE 4
+    commandName = Gearman.packetTypesReversed[commandId] or ""
     return  unless commandName
-    if bodyLength and (argTypes = Gearman.paramCount[commandName])
+    if bodyLength and argTypes = Gearman.paramCount[commandName]
       curpos = 12
       argpos = 12
       i = 0
@@ -254,28 +252,28 @@ class Gearman extends Stream
       while i < len
         if i < len - 1
           curpos++  while data[curpos] isnt 0x00 and curpos < data.length
-          curarg = data.slice(argpos, curpos)
+          curarg = data.slice argpos, curpos
         else
-          curarg = data.slice(argpos)
+          curarg = data.slice argpos
         switch argTypes[i]
           when "string"
-            curarg = curarg.toString("utf-8")
+            curarg = curarg.toString "utf-8"
           when "number"
-            curarg = Number(curarg.toString()) or 0
+            curarg = (Number curarg.toString()) or 0
         args.push curarg
         curpos++
         argpos = curpos
-        break  if curpos >= data.length
+        break if curpos >= data.length
         i++
     if @debug
-      console.log "Received: " + commandName + " with " + args.length + " params"
-      console.log " - ", data
+      console.log "Received: #{commandName} with #{args.length} params"
+      console.log " - #{data}"
       args.forEach (arg, i) ->
-        console.log "  - ARG:" + i + " ", arg.toString()
-    if typeof this["receive_" + commandName] is "function"
-      args = args.concat(@handleCallbackQueue.shift())  if commandName is "JOB_CREATED" and @handleCallbackQueue.length
-      this["receive_" + commandName].apply this, args
-    process.nextTick @receive.bind(this)  if @remainder and @remainder.length >= 12
+        console.log "  - ARG:#{i} #{arg.toString()}"
+    if typeof @["receive_#{commandName}"] is "function"
+      args = args.concat @handleCallbackQueue.shift() if commandName is "JOB_CREATED" and @handleCallbackQueue.length
+      @["receive_#{commandName}"].apply @, args
+    process.nextTick @receive.bind @ if @remainder and @remainder.length >= 12
 
   receive_NO_JOB: ->
     @sendCommand "PRE_SLEEP"
@@ -300,7 +298,7 @@ class Gearman extends Stream
 
       unless job.aborted
         job.abort()
-        job.emit "error", new Error("Job failed")
+        job.emit "error", new Error "Job failed"
 
   receive_WORK_DATA: (handle, payload) ->
     if @currentJobs[handle] and not @currentJobs[handle].aborted
@@ -319,7 +317,7 @@ class Gearman extends Stream
 
   receive_JOB_ASSIGN: (handle, name, payload) ->
     if typeof @workers[name] is "function"
-      worker = new Worker(this, handle, name, payload)
+      worker = new Worker(@, handle, name, payload)
       @currentWorkers[handle] = worker
       @workers[name] payload, worker
 
@@ -330,7 +328,6 @@ class Gearman extends Stream
     @workers[name] = func
 
   submitJob: (name, payload) ->
-    new Job(this, name, payload)
+    new Job @, name, payload
 
 module.exports = Gearman
-
