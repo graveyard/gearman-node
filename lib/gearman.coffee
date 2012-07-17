@@ -6,14 +6,15 @@ Job = require './job'
 
 class Gearman extends Stream
   constructor: (@host='localhost', @port='4730', @debug=false) ->
+    @init()
+    
+  init: ->
     @connected = @connecting = @processing = @remainder = false
     @commandQueue = []
     @handleCallbackQueue = []
     @currentJobs = {}
     @currentWorkers = {}
     @workers = {}
-    @packetTypesReversed = {}
-    @packetTypesReversed[val] = key for key, val of @packetTypes
 
   @packetTypes :
     CAN_DO: 1
@@ -52,6 +53,43 @@ class Gearman extends Stream
     SUBMIT_JOB_SCHED: 35
     SUBMIT_JOB_EPOCH: 36
 
+  @packetTypesReversed =
+    1: "CAN_DO"
+    2: "CANT_DO"
+    3: "RESET_ABILITIES"
+    4: "PRE_SLEEP"
+    6: "NOOP"
+    7: "SUBMIT_JOB"
+    8: "JOB_CREATED"
+    9: "GRAB_JOB"
+    10: "NO_JOB"
+    11: "JOB_ASSIGN"
+    12: "WORK_STATUS"
+    13: "WORK_COMPLETE"
+    14: "WORK_FAIL"
+    15: "GET_STATUS"
+    16: "ECHO_REQ"
+    17: "ECHO_RES"
+    18: "SUBMIT_JOB_BG"
+    19: "ERROR"
+    20: "STATUS_RES"
+    21: "SUBMIT_JOB_HIGH"
+    22: "SET_CLIENT_ID"
+    23: "CAN_DO_TIMEOUT"
+    24: "ALL_YOURS"
+    25: "WORK_EXCEPTION"
+    26: "OPTION_REQ"
+    27: "OPTION_RES"
+    28: "WORK_DATA"
+    29: "WORK_WARNING"
+    30: "GRAB_JOB_UNIQ"
+    31: "JOB_ASSIGN_UNIQ"
+    32: "SUBMIT_JOB_HIGH_BG"
+    33: "SUBMIT_JOB_LOW"
+    34: "SUBMIT_JOB_LOW_BG"
+    35: "SUBMIT_JOB_SCHED"
+    36: "SUBMIT_JOB_EPOCH"
+
   @paramCount :
     ERROR: [ "string", "string" ]
     JOB_ASSIGN: [ "string", "string", "buffer" ]
@@ -64,32 +102,32 @@ class Gearman extends Stream
     WORK_FAIL: [ "string" ]
     WORK_STATUS: [ "string", "number", "number" ]
 
+  connect = ->
+    if @connected or @connecting
+      @processCommandQueue()  if @connected and not @processing
+      return false
+    @connecting = true
+    console.log "connecting..."  if @debug
+    @socket = (netlib.connect or netlib.createConnection)(@port, @host)
+    @socket.on "connect", (->
+      @socket.setKeepAlive true
+      @connecting = false
+      @connected = true
+      console.log "connected!"  if @debug
+      @emit "connect"
+      @processCommandQueue()
+    ).bind(this)
+    @socket.on "end", @close.bind(this)
+    @socket.on "close", @close.bind(this)
+    @socket.on "error", @errorHandler.bind(this)
+    @socket.on "data", @receive.bind(this)
+
+  close = ->
+    if @connected
+      @closeConnection()
+      @emit "close"
+
 module.exports = Gearman
-
-Gearman::connect = ->
-  if @connected or @connecting
-    @processCommandQueue()  if @connected and not @processing
-    return false
-  @connecting = true
-  console.log "connecting..."  if @debug
-  @socket = (netlib.connect or netlib.createConnection)(@port, @host)
-  @socket.on "connect", (->
-    @socket.setKeepAlive true
-    @connecting = false
-    @connected = true
-    console.log "connected!"  if @debug
-    @emit "connect"
-    @processCommandQueue()
-  ).bind(this)
-  @socket.on "end", @close.bind(this)
-  @socket.on "close", @close.bind(this)
-  @socket.on "error", @errorHandler.bind(this)
-  @socket.on "data", @receive.bind(this)
-
-Gearman::close = ->
-  if @connected
-    @closeConnection()
-    @emit "close"
 
 Gearman::closeConnection = ->
   i = undefined
