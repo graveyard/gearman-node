@@ -28,15 +28,15 @@ describe 'worker and client', ->
   gearman = null
 
   beforeEach (done) ->
-    gearman = new Gearman("localhost")
-    gearman.on "connect", ->
+    gearman = new Gearman('localhost')
+    gearman.on 'connect', ->
       done()
-    gearman.on "error", (e) ->
+    gearman.on 'error', (e) ->
       console.log e.message
     gearman.connect()
 
   afterEach (done) ->
-    gearman.on "close", ->
+    gearman.on 'close', ->
       done()
     gearman.close()
 
@@ -61,76 +61,58 @@ describe 'worker and client', ->
     job = gearman.submitJob('test_error', 'error')
     job.on 'error', (err) ->
       assert err, 'job should have an error'
-      gearman.on "idle", -> done()
+      gearman.on 'idle', -> done()
 
     job.on 'end', (err) ->
       console.log 'DONE', err
-      assert false, "job should not have ended"
+      assert false, 'job should not have ended'
 
-###
-exports["Job timeout"] =
-  setUp: (callback) ->
-    @gearman = new Gearman("localhost")
-    @gearman.on "connect", ->
-      callback()
-
-    @gearman.on "error", (e) ->
+describe 'job timeout', ->
+  gearman = null
+  beforeEach (done) ->
+    gearman = new Gearman('localhost')
+    gearman.on 'connect', ->
+      done()
+    gearman.on 'error', (e) ->
       console.log e.message
-
-    @gearman.connect()
-    @gearman.registerWorker "test", (payload, worker) ->
+    gearman.connect()
+    gearman.registerWorker 'test', (payload, worker) ->
       setTimeout (->
-        worker.end "OK"
+        worker.end 'OK'
       ), 300
 
-  tearDown: (callback) ->
-    @gearman.on "close", ->
-      callback()
+  afterEach (done) ->
+    gearman.on 'close', ->
+      done()
+    gearman.close()
 
-    @gearman.close()
-
-  "Timeout event": (test) ->
-    test.expect 1
-    job = @gearman.submitJob("test", "test")
+  it 'generates event', (done) ->
+    job = gearman.submitJob('test', 'test')
     job.setTimeout 100
-    job.on "timeout", ->
-      test.ok 1, "TImeout occured"
-      test.done()
+    job.on 'timeout', ->
+      assert true
+      done()
+    job.on 'error', (err) ->
+      assert false, 'job should not generate error'
+    job.on 'end', (err) ->
+      assert false, 'job should not complete'
 
-    job.on "error", (err) ->
-      test.ok false, "Job failed"
-      test.done()
-
-    job.on "end", (err) ->
-      test.ok false, "Job should not complete"
-      test.done()
-
-  "Timeout callback": (test) ->
-    test.expect 1
-    job = @gearman.submitJob("test", "test")
+  it 'has timeout callback', (done) ->
+    job = gearman.submitJob('test', 'test')
     job.setTimeout 100, ->
-      test.ok true, "TImeout occured"
-      test.done()
+      assert true, 'timeout occured'
+      done()
+    job.on 'error', (err) ->
+      assert false, 'job should not generate error'
+    job.on 'end', (err) ->
+      assert false, 'job should not complete'
 
-    job.on "error", (err) ->
-      test.ok false, "Job failed"
-      test.done()
-
-    job.on "end", (err) ->
-      test.ok false, "Job should not complete"
-      test.done()
-
-  "Timeout set but does not occur": (test) ->
-    test.expect 1
-    job = @gearman.submitJob("test", "test")
+  it 'timeout does not occur', (done) ->
+    job = gearman.submitJob('test', 'test')
     job.setTimeout 400, ->
-      test.ok false, "Timeout occured"
-      test.done()
-
-    job.on "error", (err) ->
-      test.ok false, "Job failed"
-      test.done()
-
-    job.on "end", (err) ->
-      test.ok true, "Job completed before timeout"
-      test.done()
+      assert false, 'timeout occured'
+    job.on 'error', (err) ->
+      assert false, 'job should not fail'
+    job.on 'end', (err) ->
+      assert true, 'job completed before timeout'
+      done()
