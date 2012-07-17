@@ -11,19 +11,19 @@ class Job extends Stream
     @updateTimeout()
 
   updateTimeout: () ->
-    if @timeoutValue
-      clearTimeout @timeoutTimer
-      @timeoutTimer = setTimeout(@onTimeout.bind(@), @timeoutValue)
+    return if not @timeoutValue
+    clearTimeout @timeoutTimer
+    @timeoutTimer = setTimeout(@onTimeout.bind(@), @timeoutValue)
 
   onTimeout: () ->
     delete @gearman.currentJobs[@handle] if @handle
-    unless @aborted
-      @abort()
-      error = new Error("Timeout exceeded for the job")
-      if typeof @timeoutCallback is "function"
-        @timeoutCallback error
-      else
-        @emit "timeout", error
+    return if @aborted
+    @abort()
+    error = new Error("Timeout exceeded for the job")
+    if typeof @timeoutCallback is "function"
+      @timeoutCallback error
+    else
+      @emit "timeout", error
 
   abort: () ->
     clearTimeout @timeoutTimer
