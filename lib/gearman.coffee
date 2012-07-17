@@ -283,7 +283,7 @@ class Gearman extends Stream
       @sendCommand "GRAB_JOB"
     @workers[name] = func
 
-  submitJob: (name, payload, cb) ->
-    new Job @, name, payload, cb
+  submitJob: (name, payload) ->
+    new Job @, name, payload
 
 module.exports = Gearman
