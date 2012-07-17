@@ -15,7 +15,7 @@ class Gearman extends Stream
     @packetTypesReversed = {}
     @packetTypesReversed[val] = key for key, val of @packetTypes
 
-  packetTypes :
+  @packetTypes :
     CAN_DO: 1
     CANT_DO: 2
     RESET_ABILITIES: 3
@@ -52,7 +52,7 @@ class Gearman extends Stream
     SUBMIT_JOB_SCHED: 35
     SUBMIT_JOB_EPOCH: 36
 
-  paramCount :
+  @paramCount :
     ERROR: [ "string", "string" ]
     JOB_ASSIGN: [ "string", "string", "buffer" ]
     JOB_ASSIGN_UNIQ: [ "string", "string", "string", "buffer" ]
