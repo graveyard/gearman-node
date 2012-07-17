@@ -1,109 +1,70 @@
-Gearman = (host, port, debug) ->
-  Stream.call this
-  @debug = !!debug
-  @port = port or 4730
-  @host = host or "localhost"
-  @init()
-netlib = require("net")
-Stream = require("stream").Stream
-utillib = require("util")
+netlib = require "net"
+Stream = (require "stream").Stream
+utillib = require "util"
+Worker = require './worker'
+Job = require './job'
+
+class Gearman extends Stream
+  constructor: (@host='localhost', @port='4730', @debug=false) ->
+    @connected = @connecting = @processing = @remainder = false
+    @commandQueue = []
+    @handleCallbackQueue = []
+    @currentJobs = {}
+    @currentWorkers = {}
+    @workers = {}
+    @packetTypesReversed = {}
+    @packetTypesReversed[val] = key for key, val of @packetTypes
+
+  packetTypes :
+    CAN_DO: 1
+    CANT_DO: 2
+    RESET_ABILITIES: 3
+    PRE_SLEEP: 4
+    NOOP: 6
+    SUBMIT_JOB: 7
+    JOB_CREATED: 8
+    GRAB_JOB: 9
+    NO_JOB: 10
+    JOB_ASSIGN: 11
+    WORK_STATUS: 12
+    WORK_COMPLETE: 13
+    WORK_FAIL: 14
+    GET_STATUS: 15
+    ECHO_REQ: 16
+    ECHO_RES: 17
+    SUBMIT_JOB_BG: 18
+    ERROR: 19
+    STATUS_RES: 20
+    SUBMIT_JOB_HIGH: 21
+    SET_CLIENT_ID: 22
+    CAN_DO_TIMEOUT: 23
+    ALL_YOURS: 24
+    WORK_EXCEPTION: 25
+    OPTION_REQ: 26
+    OPTION_RES: 27
+    WORK_DATA: 28
+    WORK_WARNING: 29
+    GRAB_JOB_UNIQ: 30
+    JOB_ASSIGN_UNIQ: 31
+    SUBMIT_JOB_HIGH_BG: 32
+    SUBMIT_JOB_LOW: 33
+    SUBMIT_JOB_LOW_BG: 34
+    SUBMIT_JOB_SCHED: 35
+    SUBMIT_JOB_EPOCH: 36
+
+  paramCount :
+    ERROR: [ "string", "string" ]
+    JOB_ASSIGN: [ "string", "string", "buffer" ]
+    JOB_ASSIGN_UNIQ: [ "string", "string", "string", "buffer" ]
+    JOB_CREATED: [ "string" ]
+    WORK_COMPLETE: [ "string", "buffer" ]
+    WORK_EXCEPTION: [ "string", "string" ]
+    WORK_WARNING: [ "string", "string" ]
+    WORK_DATA: [ "string", "buffer" ]
+    WORK_FAIL: [ "string" ]
+    WORK_STATUS: [ "string", "number", "number" ]
+
 module.exports = Gearman
-utillib.inherits Gearman, Stream
-Gearman::init = ->
-  @connected = @connecting = @processing = false
-  @processing = false
-  @commandQueue = []
-  @handleCallbackQueue = []
-  @remainder = false
-  @currentJobs = {}
-  @currentWorkers = {}
-  @workers = {}
-
-Gearman.packetTypes =
-  CAN_DO: 1
-  CANT_DO: 2
-  RESET_ABILITIES: 3
-  PRE_SLEEP: 4
-  NOOP: 6
-  SUBMIT_JOB: 7
-  JOB_CREATED: 8
-  GRAB_JOB: 9
-  NO_JOB: 10
-  JOB_ASSIGN: 11
-  WORK_STATUS: 12
-  WORK_COMPLETE: 13
-  WORK_FAIL: 14
-  GET_STATUS: 15
-  ECHO_REQ: 16
-  ECHO_RES: 17
-  SUBMIT_JOB_BG: 18
-  ERROR: 19
-  STATUS_RES: 20
-  SUBMIT_JOB_HIGH: 21
-  SET_CLIENT_ID: 22
-  CAN_DO_TIMEOUT: 23
-  ALL_YOURS: 24
-  WORK_EXCEPTION: 25
-  OPTION_REQ: 26
-  OPTION_RES: 27
-  WORK_DATA: 28
-  WORK_WARNING: 29
-  GRAB_JOB_UNIQ: 30
-  JOB_ASSIGN_UNIQ: 31
-  SUBMIT_JOB_HIGH_BG: 32
-  SUBMIT_JOB_LOW: 33
-  SUBMIT_JOB_LOW_BG: 34
-  SUBMIT_JOB_SCHED: 35
-  SUBMIT_JOB_EPOCH: 36
-
-Gearman.packetTypesReversed =
-  1: "CAN_DO"
-  2: "CANT_DO"
-  3: "RESET_ABILITIES"
-  4: "PRE_SLEEP"
-  6: "NOOP"
-  7: "SUBMIT_JOB"
-  8: "JOB_CREATED"
-  9: "GRAB_JOB"
-  10: "NO_JOB"
-  11: "JOB_ASSIGN"
-  12: "WORK_STATUS"
-  13: "WORK_COMPLETE"
-  14: "WORK_FAIL"
-  15: "GET_STATUS"
-  16: "ECHO_REQ"
-  17: "ECHO_RES"
-  18: "SUBMIT_JOB_BG"
-  19: "ERROR"
-  20: "STATUS_RES"
-  21: "SUBMIT_JOB_HIGH"
-  22: "SET_CLIENT_ID"
-  23: "CAN_DO_TIMEOUT"
-  24: "ALL_YOURS"
-  25: "WORK_EXCEPTION"
-  26: "OPTION_REQ"
-  27: "OPTION_RES"
-  28: "WORK_DATA"
-  29: "WORK_WARNING"
-  30: "GRAB_JOB_UNIQ"
-  31: "JOB_ASSIGN_UNIQ"
-  32: "SUBMIT_JOB_HIGH_BG"
-  33: "SUBMIT_JOB_LOW"
-  34: "SUBMIT_JOB_LOW_BG"
-  35: "SUBMIT_JOB_SCHED"
-  36: "SUBMIT_JOB_EPOCH"
-
-Gearman.paramCount =
-  ERROR: [ "string", "string" ]
-  JOB_ASSIGN: [ "string", "string", "buffer" ]
-  JOB_ASSIGN_UNIQ: [ "string", "string", "string", "buffer" ]
-  JOB_CREATED: [ "string" ]
-  WORK_COMPLETE: [ "string", "buffer" ]
-  WORK_EXCEPTION: [ "string", "string" ]
-  WORK_WARNING: [ "string", "string" ]
-  WORK_DATA: [ "string", "buffer" ]
-  WORK_FAIL: [ "string" ]
-  WORK_STATUS: [ "string", "number", "number" ]
 
 Gearman::connect = ->
   if @connected or @connecting
@@ -322,7 +283,7 @@ Gearman::receive_WORK_COMPLETE = (handle, payload) ->
 
 Gearman::receive_JOB_ASSIGN = (handle, name, payload) ->
   if typeof @workers[name] is "function"
-    worker = new @Worker(this, handle, name, payload)
+    worker = new Worker(this, handle, name, payload)
     @currentWorkers[handle] = worker
     @workers[name] payload, worker
 
@@ -333,5 +294,5 @@ Gearman::registerWorker = (name, func) ->
   @workers[name] = func
 
 Gearman::submitJob = (name, payload) ->
-  new @Job(this, name, payload)
+  new Job(this, name, payload)
 
