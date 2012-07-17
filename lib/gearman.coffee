@@ -71,9 +71,11 @@ class Gearman extends Stream
       @processCommandQueue()
     if @connected or @connecting
       return false
+
     @connecting = true
     console.log "connecting..." if @debug
     @socket = (netlib.connect or netlib.createConnection) @port, @host
+
     @socket.on "connect", =>
       @socket.setKeepAlive true
       @connecting = false
@@ -93,19 +95,24 @@ class Gearman extends Stream
 
   closeConnection: ->
     return if not @connected
+
     if @socket
       try
         @socket.end()
+
     @connected = false
     @connecting = false
+
     for own i of @currentJobs
       if @currentJobs[i]
         @currentJobs[i].abort()
         @currentJobs[i].emit "error", new Error "Job failed"
       delete @currentJobs[i]
+
     for own i of @currentWorkers
       @currentWorkers[i].finished = true if @currentWorkers[i]
       delete @currentWorkers[i]
+
     @init()
 
   errorHandler: (err) ->
@@ -115,7 +122,8 @@ class Gearman extends Stream
   processCommandQueue: (chunk) ->
     if @commandQueue.length is 0
       @processing = false
-      return 
+      return
+
     @processing = true
     @sendCommandToServer.apply @, @commandQueue.shift()
 
@@ -125,83 +133,106 @@ class Gearman extends Stream
 
   sendCommandToServer: ->
     args = Array::slice.call arguments
+
     if not @connected
       @commandQueue.unshift args
       return @connect()
+
     if args.length and typeof args[args.length - 1] is "function"
       commandCallback = args.pop()
       @handleCallbackQueue.push commandCallback
+
     commandName = (args.shift() or "").trim().toUpperCase()
     commandId = @packetTypes[commandName] or 0
+
     bodyLength = 0
     for i in _.range args.length
       args[i] = new Buffer "#{args[i] or ''}", "utf-8" if args[i] not instanceof Buffer
       bodyLength += args[i].length
+
     bodyLength += if args.length > 1 then args.length - 1 else 0
     body = new Buffer bodyLength + 12
     body.writeUInt32BE 0x00524551, 0
     body.writeUInt32BE commandId, 4
     body.writeUInt32BE bodyLength, 8
+
     curpos = 12
     for i in _.range args.length
       args[i].copy body, curpos
       curpos += args[i].length
       body[curpos++] = 0x00 if i < args.length - 1
+
     if @debug
       console.log "Sending: #{commandName} with #{args.length} params"
       console.log " - #{body}"
       args.forEach (arg, i) -> console.log "  - ARG:#{i} #{arg.toString()}"
+
     @socket.write body, @processCommandQueue.bind @
 
   receive: (chunk) ->
     data = (new Buffer (chunk and chunk.length or 0) + (@remainder and @remainder.length or 0))
+
     return if not data.length
+
     if @remainder
       @remainder.copy data, 0, 0
       chunk.copy data, @remainder.length, 0 if chunk
     else
       data = chunk
+
     if data.length < 12
       @remainder = data
       return
+
     return @errorHandler new Error "Out of sync with server" if (data.readUInt32BE 0) isnt 0x00524553
+
     bodyLength = data.readUInt32BE 8
     if data.length < 12 + bodyLength
       @remainder = data
       return
+
     @remainder = false
     if data.length > 12 + bodyLength
       @remainder = data.slice 12 + bodyLength
       data = data.slice 0, 12 + bodyLength
+
     commandId = data.readUInt32BE 4
     commandName = @packetTypesReversed[commandId] or ""
+
     return if not commandName
+
     args = []
     if bodyLength and argTypes = Gearman.paramCount[commandName]
       curpos = 12
       argpos = 12
+
       for i in _.range argTypes.length
+
+        curarg = data.slice argpos
         if i < argTypes.length - 1
           curpos++ while data[curpos] isnt 0x00 and curpos < data.length
           curarg = data.slice argpos, curpos
-        else
-          curarg = data.slice argpos
+
         switch argTypes[i]
           when "string"
             curarg = curarg.toString "utf-8"
           when "number"
             curarg = (Number curarg.toString()) or 0
+
         args.push curarg
         curpos++
         argpos = curpos
         break if curpos >= data.length
+
     if @debug
       console.log "Received: #{commandName} with #{args.length} params"
       console.log " - #{data}"
       args.forEach (arg, i) -> console.log "  - ARG:#{i} #{arg.toString()}"
+
     if typeof @["receive_#{commandName}"] is "function"
       args = args.concat @handleCallbackQueue.shift() if commandName is "JOB_CREATED" and @handleCallbackQueue.length
       @["receive_#{commandName}"].apply @, args
+
     process.nextTick @receive.bind @ if @remainder and @remainder.length >= 12
 
   receive_NO_JOB: ->
