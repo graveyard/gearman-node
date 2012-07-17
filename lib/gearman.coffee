@@ -127,210 +127,210 @@ class Gearman extends Stream
       @closeConnection()
       @emit "close"
 
-module.exports = Gearman
+  closeConnection: ->
+    i = undefined
+    if @connected
+      if @socket
+        try
+          @socket.end()
+      @connected = false
+      @connecting = false
+      for i of @currentJobs
+        if @currentJobs.hasOwnProperty(i)
+          if @currentJobs[i]
+            @currentJobs[i].abort()
+            @currentJobs[i].emit "error", new Error("Job failed")
+          delete @currentJobs[i]
+      for i of @currentWorkers
+        if @currentWorkers.hasOwnProperty(i)
+          @currentWorkers[i].finished = true  if @currentWorkers[i]
+          delete @currentWorkers[i]
+      @init()
 
-Gearman::closeConnection = ->
-  i = undefined
-  if @connected
-    if @socket
-      try
-        @socket.end()
-    @connected = false
-    @connecting = false
-    for i of @currentJobs
-      if @currentJobs.hasOwnProperty(i)
-        if @currentJobs[i]
-          @currentJobs[i].abort()
-          @currentJobs[i].emit "error", new Error("Job failed")
-        delete @currentJobs[i]
-    for i of @currentWorkers
-      if @currentWorkers.hasOwnProperty(i)
-        @currentWorkers[i].finished = true  if @currentWorkers[i]
-        delete @currentWorkers[i]
-    @init()
+  errorHandler: (err) ->
+    @emit "error", err
+    @closeConnection()
 
-Gearman::errorHandler = (err) ->
-  @emit "error", err
-  @closeConnection()
+  processCommandQueue: (chunk) ->
+    command = undefined
+    if @commandQueue.length
+      @processing = true
+      command = @commandQueue.shift()
+      @sendCommandToServer.apply this, command
+    else
+      @processing = false
 
-Gearman::processCommandQueue = (chunk) ->
-  command = undefined
-  if @commandQueue.length
-    @processing = true
-    command = @commandQueue.shift()
-    @sendCommandToServer.apply this, command
-  else
-    @processing = false
+  sendCommand: ->
+    command = Array::slice.call(arguments)
+    @commandQueue.push command
+    @processCommandQueue()  unless @processing
 
-Gearman::sendCommand = ->
-  command = Array::slice.call(arguments)
-  @commandQueue.push command
-  @processCommandQueue()  unless @processing
-
-Gearman::sendCommandToServer = ->
-  body = undefined
-  args = Array::slice.call(arguments)
-  commandName = undefined
-  commandId = undefined
-  commandCallback = undefined
-  i = undefined
-  len = undefined
-  bodyLength = 0
-  curpos = 12
-  unless @connected
-    @commandQueue.unshift args
-    return @connect()
-  commandName = (args.shift() or "").trim().toUpperCase()
-  if args.length and typeof args[args.length - 1] is "function"
-    commandCallback = args.pop()
-    @handleCallbackQueue.push commandCallback
-  commandId = Gearman.packetTypes[commandName] or 0
-  commandId
-  i = 0
-  len = args.length
-
-  while i < len
-    args[i] = new Buffer((args[i] or "").toString(), "utf-8")  unless args[i] instanceof Buffer
-    bodyLength += args[i].length
-    i++
-  bodyLength += (if args.length > 1 then args.length - 1 else 0)
-  body = new Buffer(bodyLength + 12)
-  body.writeUInt32BE 0x00524551, 0
-  body.writeUInt32BE commandId, 4
-  body.writeUInt32BE bodyLength, 8
-  i = 0
-  len = args.length
-
-  while i < len
-    args[i].copy body, curpos
-    curpos += args[i].length
-    body[curpos++] = 0x00  if i < args.length - 1
-    i++
-  if @debug
-    console.log "Sending: " + commandName + " with " + args.length + " params"
-    console.log " - ", body
-    args.forEach (arg, i) ->
-      console.log "  - ARG:" + i + " ", arg.toString()
-  @socket.write body, @processCommandQueue.bind(this)
-
-Gearman::receive = (chunk) ->
-  data = new Buffer((chunk and chunk.length or 0) + (@remainder and @remainder.length or 0))
-  commandId = undefined
-  commandName = undefined
-  bodyLength = 0
-  args = []
-  argTypes = undefined
-  curarg = undefined
-  i = undefined
-  len = undefined
-  argpos = undefined
-  curpos = undefined
-  return  unless data.length
-  if @remainder
-    @remainder.copy data, 0, 0
-    chunk.copy data, @remainder.length, 0  if chunk
-  else
-    data = chunk
-  if data.length < 12
-    @remainder = data
-    return
-  return @errorHandler(new Error("Out of sync with server"))  unless data.readUInt32BE(0) is 0x00524553
-  bodyLength = data.readUInt32BE(8)
-  if data.length < 12 + bodyLength
-    @remainder = data
-    return
-  if data.length > 12 + bodyLength
-    @remainder = data.slice(12 + bodyLength)
-    data = data.slice(0, 12 + bodyLength)
-  else
-    @remainder = false
-  commandId = data.readUInt32BE(4)
-  commandName = (Gearman.packetTypesReversed[commandId] or "")
-  return  unless commandName
-  if bodyLength and (argTypes = Gearman.paramCount[commandName])
+  sendCommandToServer: ->
+    body = undefined
+    args = Array::slice.call(arguments)
+    commandName = undefined
+    commandId = undefined
+    commandCallback = undefined
+    i = undefined
+    len = undefined
+    bodyLength = 0
     curpos = 12
-    argpos = 12
+    unless @connected
+      @commandQueue.unshift args
+      return @connect()
+    commandName = (args.shift() or "").trim().toUpperCase()
+    if args.length and typeof args[args.length - 1] is "function"
+      commandCallback = args.pop()
+      @handleCallbackQueue.push commandCallback
+    commandId = Gearman.packetTypes[commandName] or 0
+    commandId
     i = 0
-    len = argTypes.length
+    len = args.length
 
     while i < len
-      if i < len - 1
-        curpos++  while data[curpos] isnt 0x00 and curpos < data.length
-        curarg = data.slice(argpos, curpos)
-      else
-        curarg = data.slice(argpos)
-      switch argTypes[i]
-        when "string"
-          curarg = curarg.toString("utf-8")
-        when "number"
-          curarg = Number(curarg.toString()) or 0
-      args.push curarg
-      curpos++
-      argpos = curpos
-      break  if curpos >= data.length
+      args[i] = new Buffer((args[i] or "").toString(), "utf-8")  unless args[i] instanceof Buffer
+      bodyLength += args[i].length
       i++
-  if @debug
-    console.log "Received: " + commandName + " with " + args.length + " params"
-    console.log " - ", data
-    args.forEach (arg, i) ->
-      console.log "  - ARG:" + i + " ", arg.toString()
-  if typeof this["receive_" + commandName] is "function"
-    args = args.concat(@handleCallbackQueue.shift())  if commandName is "JOB_CREATED" and @handleCallbackQueue.length
-    this["receive_" + commandName].apply this, args
-  process.nextTick @receive.bind(this)  if @remainder and @remainder.length >= 12
+    bodyLength += (if args.length > 1 then args.length - 1 else 0)
+    body = new Buffer(bodyLength + 12)
+    body.writeUInt32BE 0x00524551, 0
+    body.writeUInt32BE commandId, 4
+    body.writeUInt32BE bodyLength, 8
+    i = 0
+    len = args.length
 
-Gearman::receive_NO_JOB = ->
-  @sendCommand "PRE_SLEEP"
-  @emit "idle"
+    while i < len
+      args[i].copy body, curpos
+      curpos += args[i].length
+      body[curpos++] = 0x00  if i < args.length - 1
+      i++
+    if @debug
+      console.log "Sending: " + commandName + " with " + args.length + " params"
+      console.log " - ", body
+      args.forEach (arg, i) ->
+        console.log "  - ARG:" + i + " ", arg.toString()
+    @socket.write body, @processCommandQueue.bind(this)
 
-Gearman::receive_NOOP = ->
-  @sendCommand "GRAB_JOB"
+  receive: (chunk) ->
+    data = new Buffer((chunk and chunk.length or 0) + (@remainder and @remainder.length or 0))
+    commandId = undefined
+    commandName = undefined
+    bodyLength = 0
+    args = []
+    argTypes = undefined
+    curarg = undefined
+    i = undefined
+    len = undefined
+    argpos = undefined
+    curpos = undefined
+    return  unless data.length
+    if @remainder
+      @remainder.copy data, 0, 0
+      chunk.copy data, @remainder.length, 0  if chunk
+    else
+      data = chunk
+    if data.length < 12
+      @remainder = data
+      return
+    return @errorHandler(new Error("Out of sync with server"))  unless data.readUInt32BE(0) is 0x00524553
+    bodyLength = data.readUInt32BE(8)
+    if data.length < 12 + bodyLength
+      @remainder = data
+      return
+    if data.length > 12 + bodyLength
+      @remainder = data.slice(12 + bodyLength)
+      data = data.slice(0, 12 + bodyLength)
+    else
+      @remainder = false
+    commandId = data.readUInt32BE(4)
+    commandName = (Gearman.packetTypesReversed[commandId] or "")
+    return  unless commandName
+    if bodyLength and (argTypes = Gearman.paramCount[commandName])
+      curpos = 12
+      argpos = 12
+      i = 0
+      len = argTypes.length
 
-Gearman::receive_ECHO_REQ = (payload) ->
-  @sendCommand "ECHO_RES", payload
+      while i < len
+        if i < len - 1
+          curpos++  while data[curpos] isnt 0x00 and curpos < data.length
+          curarg = data.slice(argpos, curpos)
+        else
+          curarg = data.slice(argpos)
+        switch argTypes[i]
+          when "string"
+            curarg = curarg.toString("utf-8")
+          when "number"
+            curarg = Number(curarg.toString()) or 0
+        args.push curarg
+        curpos++
+        argpos = curpos
+        break  if curpos >= data.length
+        i++
+    if @debug
+      console.log "Received: " + commandName + " with " + args.length + " params"
+      console.log " - ", data
+      args.forEach (arg, i) ->
+        console.log "  - ARG:" + i + " ", arg.toString()
+    if typeof this["receive_" + commandName] is "function"
+      args = args.concat(@handleCallbackQueue.shift())  if commandName is "JOB_CREATED" and @handleCallbackQueue.length
+      this["receive_" + commandName].apply this, args
+    process.nextTick @receive.bind(this)  if @remainder and @remainder.length >= 12
 
-Gearman::receive_ERROR = (code, message) ->
-  console.log "Server error: ", code, message  if @debug
+  receive_NO_JOB: ->
+    @sendCommand "PRE_SLEEP"
+    @emit "idle"
 
-Gearman::receive_JOB_CREATED = (handle, callback) ->
-  callback handle  if typeof callback is "function"
-
-Gearman::receive_WORK_FAIL = (handle) ->
-  job = undefined
-  if job = @currentJobs[handle]
-    delete @currentJobs[handle]
-
-    unless job.aborted
-      job.abort()
-      job.emit "error", new Error("Job failed")
-
-Gearman::receive_WORK_DATA = (handle, payload) ->
-  if @currentJobs[handle] and not @currentJobs[handle].aborted
-    @currentJobs[handle].emit "data", payload
-    @currentJobs[handle].updateTimeout()
-
-Gearman::receive_WORK_COMPLETE = (handle, payload) ->
-  job = undefined
-  if job = @currentJobs[handle]
-    delete @currentJobs[handle]
-
-    unless job.aborted
-      clearTimeout job.timeoutTimer
-      job.emit "data", payload  if payload
-      job.emit "end"
-
-Gearman::receive_JOB_ASSIGN = (handle, name, payload) ->
-  if typeof @workers[name] is "function"
-    worker = new Worker(this, handle, name, payload)
-    @currentWorkers[handle] = worker
-    @workers[name] payload, worker
-
-Gearman::registerWorker = (name, func) ->
-  unless @workers[name]
-    @sendCommand "CAN_DO", name
+  receive_NOOP: ->
     @sendCommand "GRAB_JOB"
-  @workers[name] = func
 
-Gearman::submitJob = (name, payload) ->
-  new Job(this, name, payload)
+  receive_ECHO_REQ: (payload) ->
+    @sendCommand "ECHO_RES", payload
+
+  receive_ERROR: (code, message) ->
+    console.log "Server error: ", code, message  if @debug
+
+  receive_JOB_CREATED: (handle, callback) ->
+    callback handle  if typeof callback is "function"
+
+  receive_WORK_FAIL: (handle) ->
+    job = undefined
+    if job = @currentJobs[handle]
+      delete @currentJobs[handle]
+
+      unless job.aborted
+        job.abort()
+        job.emit "error", new Error("Job failed")
+
+  receive_WORK_DATA: (handle, payload) ->
+    if @currentJobs[handle] and not @currentJobs[handle].aborted
+      @currentJobs[handle].emit "data", payload
+      @currentJobs[handle].updateTimeout()
+
+  receive_WORK_COMPLETE: (handle, payload) ->
+    job = undefined
+    if job = @currentJobs[handle]
+      delete @currentJobs[handle]
+
+      unless job.aborted
+        clearTimeout job.timeoutTimer
+        job.emit "data", payload  if payload
+        job.emit "end"
+
+  receive_JOB_ASSIGN: (handle, name, payload) ->
+    if typeof @workers[name] is "function"
+      worker = new Worker(this, handle, name, payload)
+      @currentWorkers[handle] = worker
+      @workers[name] payload, worker
+
+  registerWorker: (name, func) ->
+    unless @workers[name]
+      @sendCommand "CAN_DO", name
+      @sendCommand "GRAB_JOB"
+    @workers[name] = func
+
+  submitJob: (name, payload) ->
+    new Job(this, name, payload)
+
+module.exports = Gearman
 
