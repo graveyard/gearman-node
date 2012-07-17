@@ -1,39 +1,39 @@
-Gearman::Job = (gearman, name, payload) ->
-  Stream.call this
-  @gearman = gearman
-  @name = name
-  @payload = payload
-  @timeoutTimer = null
-  gearman.sendCommand "SUBMIT_JOB", name, false, payload, @receiveHandle.bind(this)
+Stream = require("stream").Stream
 
-utillib.inherits Gearman::Job, Stream
-Gearman::Job::setTimeout = (timeout, timeoutCallback) ->
-  @timeoutValue = timeout
-  @timeoutCallback = timeoutCallback
-  @updateTimeout()
+class Job extends Stream
+  initialize: (@gearman, @name, @payload) ->
+    @timeoutTimer = null
+    @gearman.sendCommand "SUBMIT_JOB", @name, false, @payload, @receiveHandle.bind(@)
 
-Gearman::Job::updateTimeout = ->
-  if @timeoutValue
+  setTimeout: (timeout, timeoutCallback) ->
+    @timeoutValue = timeout
+    @timeoutCallback = timeoutCallback
+    @updateTimeout()
+
+  updateTimeout: () ->
+    if @timeoutValue
+      clearTimeout @timeoutTimer
+      @timeoutTimer = setTimeout(@onTimeout.bind(@), @timeoutValue)
+
+  onTimeout: () ->
+    delete @gearman.currentJobs[@handle] if @handle
+    unless @aborted
+      @abort()
+      error = new Error("Timeout exceeded for the job")
+      if typeof @timeoutCallback is "function"
+        @timeoutCallback error
+      else
+        @emit "timeout", error
+
+  abort: () ->
     clearTimeout @timeoutTimer
-    @timeoutTimer = setTimeout(@onTimeout.bind(this), @timeoutValue)
+    @aborted = true
 
-Gearman::Job::onTimeout = ->
-  delete @gearman.currentJobs[@handle]  if @handle
-  unless @aborted
-    @abort()
-    error = new Error("Timeout exceeded for the job")
-    if typeof @timeoutCallback is "function"
-      @timeoutCallback error
+  receiveHandle: (handle) ->
+    if handle
+      @handle = handle
+      @gearman.currentJobs[handle] = @
     else
-      @emit "timeout", error
+      @emit "error", new Error("Invalid response from server")
 
-Gearman::Job::abort = ->
-  clearTimeout @timeoutTimer
-  @aborted = true
-
-Gearman::Job::receiveHandle = (handle) ->
-  if handle
-    @handle = handle
-    @gearman.currentJobs[handle] = this
-  else
-    @emit "error", new Error("Invalid response from server")
+module.exports = Job

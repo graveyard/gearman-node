@@ -1,29 +1,26 @@
-Gearman::Worker = (gearman, handle, name, payload) ->
-  Stream.call this
-  @gearman = gearman
-  @handle = handle
-  @name = name
-  @payload = payload
-  @finished = false
-  @writable = true
+Stream = require("stream").Stream
 
-utillib.inherits Gearman::Worker, Stream
-Gearman::Worker::write = (data) ->
-  return  if @finished
-  @gearman.sendCommand "WORK_DATA", @handle, data
+class Worker extends Stream
+  constructor: (@gearman, @handle, @name, @payload) ->
+    @writable = true
+    @finished = false
 
-Gearman::Worker::end = (data) ->
-  return  if @finished
-  @finished = true
-  @gearman.sendCommand "WORK_COMPLETE", @handle, data
-  delete @gearman.currentWorkers[@handle]
+  write: (data) ->
+    return if @finished
+    @gearman.sendCommand "WORK_DATA", @handle, data
 
-  @gearman.sendCommand "GRAB_JOB"
+  end: (data) ->
+    return if @finished
+    @finished = true
+    @gearman.sendCommand "WORK_COMPLETE", @handle, data
+    delete @gearman.currentWorkers[@handle]
+    @gearman.sendCommand "GRAB_JOB"
 
-Gearman::Worker::error = (error) ->
-  return  if @finished
-  @finished = true
-  @gearman.sendCommand "WORK_FAIL", @handle
-  delete @gearman.currentWorkers[@handle]
+  error: (error) ->
+    return if @finished
+    @finished = true
+    @gearman.sendCommand "WORK_FAIL", @handle
+    delete @gearman.currentWorkers[@handle]
+    @gearman.sendCommand "GRAB_JOB"
 
-  @gearman.sendCommand "GRAB_JOB"
+module.exports = Worker
