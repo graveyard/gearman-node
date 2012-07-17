@@ -1,7 +1,7 @@
 Stream = require("stream").Stream
 
 class Job extends Stream
-  initialize: (@gearman, @name, @payload) ->
+  constructor: (@gearman, @name, @payload) ->
     @timeoutTimer = null
     @gearman.sendCommand "SUBMIT_JOB", @name, false, @payload, @receiveHandle.bind(@)
 
