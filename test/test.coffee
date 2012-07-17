@@ -27,7 +27,7 @@ describe 'test connection', ->
 describe 'worker and client', ->
   gearman = null
 
-  before (done) ->
+  beforeEach (done) ->
     gearman = new Gearman("localhost")
     gearman.on "connect", ->
       done()
@@ -35,7 +35,7 @@ describe 'worker and client', ->
       console.log e.message
     gearman.connect()
 
-  after (done) ->
+  afterEach (done) ->
     gearman.on "close", ->
       done()
     gearman.close()
@@ -51,33 +51,23 @@ describe 'worker and client', ->
     job.on 'data', (payload) ->
       assert.equal payload.toString('base64'), data2.toString('base64')
 
-    job.on "end", ->
+    job.on 'end', ->
       gearman.on 'idle', -> done()
 
-###
   it 'allows for worker failure', (done) ->
-    gearman.registerWorker 'test', (payload, worker) ->
+    gearman.registerWorker 'test_error', (payload, worker) ->
       worker.error()
 
-    job = gearman.submitJob('test', 'test')
+    job = gearman.submitJob('test_error', 'error')
     job.on 'error', (err) ->
       assert err, 'job should have an error'
       gearman.on "idle", -> done()
 
-    job.on "end", (err) ->
+    job.on 'end', (err) ->
+      console.log 'DONE', err
       assert false, "job should not have ended"
-      done()
 
-  it 'server fails jobs', (done) ->
-    job = gearman.submitJob('test', 'test')
-    job.on "error", (err) ->
-      assert err, 'job should have error'
-      done()
-
-    job.on "end", (err) ->
-      test.ok false, "Job did not fail"
-      done()
-
+###
 exports["Job timeout"] =
   setUp: (callback) ->
     @gearman = new Gearman("localhost")
