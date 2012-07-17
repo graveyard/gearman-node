@@ -12,82 +12,71 @@ describe 'test connection', ->
     assert gearman instanceof Gearman, 'instance not created'
 
   it 'connect to server', (done) ->
-    gearman.connect()
     gearman.on 'error', (e) ->
       assert false, 'error connecting'
       done()
     gearman.on 'connect', ->
       done()
+    gearman.connect()
 
   it 'closes connection', (done) ->
     gearman.on 'close', ->
       done()
     gearman.close()
 
+describe 'worker and client', ->
+  gearman = null
 
-###
-exports["Worker and Client"] =
-  setUp: (callback) ->
-    @gearman = new Gearman("localhost")
-    @gearman.on "connect", ->
-      callback()
-
-    @gearman.on "error", (e) ->
+  before (done) ->
+    gearman = new Gearman("localhost")
+    gearman.on "connect", ->
+      done()
+    gearman.on "error", (e) ->
       console.log e.message
+    gearman.connect()
 
-    @gearman.connect()
+  after (done) ->
+    gearman.on "close", ->
+      done()
+    gearman.close()
 
-  tearDown: (callback) ->
-    @gearman.on "close", ->
-      callback()
-
-    @gearman.close()
-
-  "Send/Receive binary data": (test) ->
-    test.expect 2
+  it 'sends/receives binary data', (done) ->
     data1 = new Buffer([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ])
     data2 = new Buffer([ 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255 ])
-    @gearman.registerWorker "test", (payload, worker) ->
-      test.equal payload.toString("base64"), data1.toString("base64")
+    gearman.registerWorker 'test', (payload, worker) ->
+      assert.equal payload.toString('base64'), data1.toString('base64')
       worker.end data2
 
-    job = @gearman.submitJob("test", data1)
-    job.on "data", (payload) ->
-      test.equal payload.toString("base64"), data2.toString("base64")
+    job = gearman.submitJob('test', data1)
+    job.on 'data', (payload) ->
+      assert.equal payload.toString('base64'), data2.toString('base64')
 
     job.on "end", ->
-      @gearman.on "idle", ->
-        test.done()
+      gearman.on 'idle', -> done()
 
-  "Worker fails": (test) ->
-    test.expect 1
-    @gearman.registerWorker "test", (payload, worker) ->
+###
+  it 'allows for worker failure', (done) ->
+    gearman.registerWorker 'test', (payload, worker) ->
       worker.error()
 
-    job = @gearman.submitJob("test", "test")
+    job = gearman.submitJob('test', 'test')
+    job.on 'error', (err) ->
+      assert err, 'job should have an error'
+      gearman.on "idle", -> done()
+
+    job.on "end", (err) ->
+      assert false, "job should not have ended"
+      done()
+
+  it 'server fails jobs', (done) ->
+    job = gearman.submitJob('test', 'test')
     job.on "error", (err) ->
-      test.ok err, "Job failed"
-      @gearman.on "idle", ->
-        test.done()
+      assert err, 'job should have error'
+      done()
 
     job.on "end", (err) ->
       test.ok false, "Job did not fail"
-      test.done()
-
-  "Server fails jobs": (test) ->
-    test.expect 1
-    job = @gearman.submitJob("test", "test")
-    job.on "error", (err) ->
-      test.ok err, "Job failed"
-      test.done()
-
-    job.on "end", (err) ->
-      test.ok false, "Job did not fail"
-      test.done()
-
-    setTimeout (->
-      @gearman.close()
-    ).bind(this), 300
+      done()
 
 exports["Job timeout"] =
   setUp: (callback) ->
