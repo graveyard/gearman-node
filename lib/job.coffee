@@ -3,7 +3,7 @@ Stream = require("stream").Stream
 class Job extends Stream
   constructor: (@gearman, @name, @payload) ->
     @timeoutTimer = null
-    @gearman.sendCommand "SUBMIT_JOB", @name, false, @payload, @receiveHandle.bind(@)
+    @gearman.sendCommand "SUBMIT_JOB", @name, false, @payload, @receiveHandle.bind @
 
   setTimeout: (timeout, timeoutCallback) ->
     @timeoutValue = timeout
@@ -13,7 +13,7 @@ class Job extends Stream
   updateTimeout: () ->
     return if not @timeoutValue
     clearTimeout @timeoutTimer
-    @timeoutTimer = setTimeout(@onTimeout.bind(@), @timeoutValue)
+    @timeoutTimer = setTimeout (@onTimeout.bind @), @timeoutValue
 
   onTimeout: () ->
     delete @gearman.currentJobs[@handle] if @handle
@@ -30,10 +30,10 @@ class Job extends Stream
     @aborted = true
 
   receiveHandle: (handle) ->
-    if handle
-      @handle = handle
-      @gearman.currentJobs[handle] = @
-    else
+    if not handle
       @emit "error", new Error("Invalid response from server")
+      return
+    @handle = handle
+    @gearman.currentJobs[handle] = @
 
 module.exports = Job
