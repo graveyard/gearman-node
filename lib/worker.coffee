@@ -16,7 +16,7 @@ class Worker extends Stream
     delete @gearman.currentWorkers[@handle]
     @gearman.sendCommand "GRAB_JOB"
 
-  error: (error) ->
+  error: () ->
     return if @finished
     @finished = true
     @gearman.sendCommand "WORK_FAIL", @handle
