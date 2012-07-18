@@ -19,11 +19,10 @@ class Job extends Stream
     delete @gearman.currentJobs[@handle] if @handle
     return if @aborted
     @abort()
-    error = new Error("Timeout exceeded for the job")
     if typeof @timeoutCallback is "function"
       @timeoutCallback error
     else
-      @emit "timeout", error
+      @emit "timeout", handle
 
   abort: () ->
     clearTimeout @timeoutTimer
@@ -31,7 +30,7 @@ class Job extends Stream
 
   receiveHandle: (handle) ->
     if not handle
-      @emit "error", new Error("Invalid response from server")
+      @emit "error", (new Error "Invalid response from server"), handle
       return
     @handle = handle
     @gearman.currentJobs[handle] = @

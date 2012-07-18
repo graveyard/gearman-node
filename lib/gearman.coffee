@@ -106,7 +106,7 @@ class Gearman extends Stream
     for own i of @currentJobs
       if @currentJobs[i]
         @currentJobs[i].abort()
-        @currentJobs[i].emit "error", new Error "Job failed"
+        @currentJobs[i].emit "error", (new Error "Job failed - connection closed before completion"), i
       delete @currentJobs[i]
 
     for own i of @currentWorkers
@@ -256,7 +256,7 @@ class Gearman extends Stream
     delete @currentJobs[handle]
     return if job.aborted
     job.abort()
-    job.emit "error", new Error "Job failed", handle
+    job.emit "error", (new Error "Job failed"), handle
 
   receive_WORK_WARNING: (handle, warning) ->
     return if not @currentJobs[handle] or @currentJobs[handle].aborted
@@ -264,7 +264,7 @@ class Gearman extends Stream
 
   receive_WORK_DATA: (handle, payload) ->
     return if not @currentJobs[handle] or @currentJobs[handle].aborted
-    @currentJobs[handle].emit "data", payload
+    @currentJobs[handle].emit "data", payload, handle
     @currentJobs[handle].updateTimeout()
 
   receive_WORK_COMPLETE: (handle, payload) ->
@@ -272,7 +272,7 @@ class Gearman extends Stream
     delete @currentJobs[handle]
     return if job.aborted
     clearTimeout job.timeoutTimer
-    job.emit "data", payload if payload
+    job.emit "data", (if payload then payload else new Buffer), handle
     job.emit "end", handle
 
   receive_JOB_ASSIGN: (handle, name, payload) ->

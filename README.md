@@ -37,24 +37,26 @@ Example:
 
 Jobs can be submitted with `gearman.submitJob name, payload` where `name` is the name of the function and `payload` is a string or a Buffer. The returned object (Event Emitter) can be used to detect job status and has the following events:
 
-  * **error** - if the job failed, has parameter error
-  * **data** - contains a chunk of data as a Buffer
-  * **end** - when the job has been completed, has no parameters
-  * **timeout** - when the job has been canceled due to timeout
+  * **error** - job failed - has parameter unhelpful error message and job handle
+    * **NOTE: to pass error messages from worker to client, have the worker emit a warning and then fail**
+  * **warn** - job issued a warning - has parameters warning message and job handle
+  * **data** - job passed back data - has parameters a chunk of data as a Buffer and job handle
+  * **end** - job completed - has parameter job handle
+  * **timeout** - job canceled due to timeout - has parameter job handle
 
 Example:
 
     gearman = new Gearman hostname, port
     job = gearman.submitJob "reverse", "test string"
 
-    job.on "data", (data) ->
+    job.on "data", (data, handle) ->
         console.log data.toString "utf-8" # gnirts tset
 
-    job.on "end", () ->
+    job.on "end", (handle) ->
         console.log "Job completed!"
 
-    job.on "error", (err) ->
-        console.log err.message
+    job.on "error", (unhelpful_err_message, handle) ->
+        console.log "Error!"
 
 ## Setup a worker
 
@@ -62,8 +64,9 @@ Workers can be set up with `gearman.registerWorker name, callback` where `name` 
 
 Worker function `callback` gets two parameters - `payload` (received data as a Buffer) and `worker` which is a helper object to communicate with the server. `worker` object has following methods:
 
-  * **write(data)** - for sending data chunks to the client
-  * **end([data])** for completing the job
+  * **write(data)** - sends data chunks to the client
+  * **end([data])** - completes the job
+  * **warn(message)** - sends a warning message to the client
   * **error()** to indicate that the job failed
 
 Example:
@@ -72,6 +75,7 @@ Example:
 
     gearman.registerWorker "reverse", (payload, worker) ->
         if not payload
+          worker.warn "No payload"
           worker.error()
           return
         
