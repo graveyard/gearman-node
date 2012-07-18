@@ -1,7 +1,7 @@
 gearman-coffee
 ==============
 
-**gearman-coffee** is a rewrite of of [**node-gearman**](https://github.com/andris9/node-gearman) in CoffeeScript that adds additional administrative functions as well as more verbose error handling.
+**gearman-coffee** is a rewrite of of **[node-gearman](https://github.com/andris9/node-gearman)** in CoffeeScript that adds additional administrative functions as well as more verbose error handling.
 
 ## Connect to a Gearman server
 
