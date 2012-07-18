@@ -23,4 +23,8 @@ class Worker extends Stream
     delete @gearman.currentWorkers[@handle]
     @gearman.sendCommand "GRAB_JOB"
 
+  warn: (warning) ->
+    return if @finished
+    @gearman.sendCommand "WORK_WARNING", @handle, warning
+
 module.exports = Worker

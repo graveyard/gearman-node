@@ -60,7 +60,7 @@ class Gearman extends Stream
     JOB_ASSIGN_UNIQ: [ "string", "string", "string", "buffer" ]
     JOB_CREATED: [ "string" ]
     WORK_COMPLETE: [ "string", "buffer" ]
-    WORK_EXCEPTION: [ "string", "string" ]
+    WORK_EXCEPTION: [ "string", "buffer" ]
     WORK_WARNING: [ "string", "string" ]
     WORK_DATA: [ "string", "buffer" ]
     WORK_FAIL: [ "string" ]
@@ -256,7 +256,11 @@ class Gearman extends Stream
     delete @currentJobs[handle]
     return if job.aborted
     job.abort()
-    job.emit "error", new Error "Job failed"
+    job.emit "error", new Error "Job failed", handle
+
+  receive_WORK_WARNING: (handle, warning) ->
+    return if not @currentJobs[handle] or @currentJobs[handle].aborted
+    @currentJobs[handle].emit "warn", warning, handle
 
   receive_WORK_DATA: (handle, payload) ->
     return if not @currentJobs[handle] or @currentJobs[handle].aborted
@@ -269,7 +273,7 @@ class Gearman extends Stream
     return if job.aborted
     clearTimeout job.timeoutTimer
     job.emit "data", payload if payload
-    job.emit "end"
+    job.emit "end", handle
 
   receive_JOB_ASSIGN: (handle, name, payload) ->
     return if typeof @workers[name] isnt "function"

@@ -35,6 +35,6 @@ class Job extends Stream
       return
     @handle = handle
     @gearman.currentJobs[handle] = @
-    @emit "created"
+    @emit "created", handle
 
 module.exports = Job
