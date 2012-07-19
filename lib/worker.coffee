@@ -28,7 +28,7 @@ class Worker extends Stream
     @gearman.sendCommand "WORK_WARNING", @handle, warning
 
   done: (err) ->
-    return @complete() if not err?
+    return @success() if not err?
     @warn err
     @error()
 
