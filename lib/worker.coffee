@@ -9,7 +9,7 @@ class Worker extends Stream
     return if @finished
     @gearman.sendCommand "WORK_DATA", @handle, data
 
-  end: (data) ->
+  success: (data) ->
     return if @finished
     @finished = true
     @gearman.sendCommand "WORK_COMPLETE", @handle, data
@@ -26,5 +26,10 @@ class Worker extends Stream
   warn: (warning) ->
     return if @finished
     @gearman.sendCommand "WORK_WARNING", @handle, warning
+
+  done: (err) ->
+    return @complete() if not err?
+    @warn err
+    @error()
 
 module.exports = Worker

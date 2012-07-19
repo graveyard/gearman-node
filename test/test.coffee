@@ -45,7 +45,7 @@ describe 'worker and client', ->
     data2 = new Buffer([ 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255 ])
     gearman.registerWorker 'test', (payload, worker) ->
       assert.equal payload.toString('base64'), data1.toString('base64')
-      worker.end data2
+      worker.success data2
 
     job = gearman.submitJob('test', data1)
     job.on 'data', (payload) ->
@@ -78,7 +78,7 @@ describe 'job timeout', ->
     gearman.connect()
     gearman.registerWorker 'test', (payload, worker) ->
       setTimeout (->
-        worker.end 'OK'
+        worker.success 'OK'
       ), 300
 
   afterEach (done) ->
