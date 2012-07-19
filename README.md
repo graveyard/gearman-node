@@ -68,6 +68,7 @@ Worker function `callback` gets two parameters - `payload` (received data as a B
   * **end([data])** - completes the job
   * **warn(message)** - sends a warning message to the client
   * **error()** to indicate that the job failed
+  * **done([err])** shorthand for calling a waring+error if there's an err, else calling end with no data
 
 Example:
 
@@ -93,7 +94,7 @@ Timeout automatically aborts further processing of the job.
 If `timeoutCallback` is not set, a `'timeout'` event is emitted on timeout.
 
     job.setTimeout 10*1000 # timeout in 10 secs
-    job.on "timeout", () ->
+    job.on "timeout", (handle) ->
         console.log "Timeout exceeded for the worker. Job aborted."
 
 ## Close connection
