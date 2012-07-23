@@ -1,118 +1,138 @@
 assert  = require 'assert'
-Gearman = require '../index'
+Gearman = require('../index').Gearman
+Client = require('../index').Client
+Worker = require('../index').Worker
+_ = require 'underscore'
+async = require 'async'
 
-gearman = new Gearman('localhost')
+options =
+  host: 'localhost'
+  port: 4730
+  debug: true
 
-describe 'test connection', ->
+describe 'connection', ->
   gearman = null
   before () ->
-    gearman = new Gearman('localhost')
+    gearman = new Gearman(options.host, options.port, options.debug)
+    gearman.on 'error', (e) -> throw e
 
   it 'instantiates Gearman class', ->
     assert gearman instanceof Gearman, 'instance not created'
 
-  it 'connect to server', (done) ->
-    gearman.on 'error', (e) ->
-      assert false, 'error connecting'
-      done()
-    gearman.on 'connect', ->
-      done()
+  it 'can connect to server', (done) ->
+    gearman.on 'connect', -> done()
     gearman.connect()
 
   it 'closes connection', (done) ->
-    gearman.on 'close', ->
-      done()
-    gearman.close()
+    gearman.on 'disconnect', -> done()
+    gearman.disconnect()
 
 describe 'worker and client', ->
-  gearman = null
-
-  beforeEach (done) ->
-    gearman = new Gearman('localhost')
-    gearman.on 'connect', ->
-      done()
-    gearman.on 'error', (e) ->
-      console.log e.message
-    gearman.connect()
-
-  afterEach (done) ->
-    gearman.on 'close', ->
-      done()
-    gearman.close()
-
   it 'sends/receives binary data', (done) ->
+    @timeout 10000
     data1 = new Buffer([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ])
     data2 = new Buffer([ 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255 ])
-    gearman.registerWorker 'test', (payload, worker) ->
+    worker = new Worker 'test', (payload, worker) ->
       assert.equal payload.toString('base64'), data1.toString('base64')
-      worker.success data2
+      worker.emit 'complete', data2
+    , options
 
-    job = gearman.submitJob('test', data1)
-    job.on 'data', (payload) ->
-      assert.equal payload.toString('base64'), data2.toString('base64')
+    client = new Client options
+    job = client.submitJob 'test', data1
+    job.on 'complete', (handle, data) ->
+      assert.equal data.toString('base64'), data2.toString('base64')
+      worker.disconnect()
+      client.disconnect()
+      done()
 
-    job.on 'end', ->
-      gearman.on 'idle', -> done()
+  it 'sends/receives strings and json', (done) ->
+    @timeout 10000
+    payload_data = { 'test payload': 'test' }
+    worker_data = { 'test worker': 'test' }
+    worker = new Worker 'test_json', (payload, worker) ->
+      assert.deepEqual JSON.parse(payload), payload_data
+      worker.emit 'complete', JSON.stringify(worker_data)
+    , options
+
+    client = new Client options
+    job = client.submitJob 'test_json', JSON.stringify(payload_data)
+    job.on 'complete', (handle, data) ->
+      assert.deepEqual JSON.parse(data), worker_data
+      worker.disconnect()
+      client.disconnect()
+      done()
 
   it 'allows for worker failure', (done) ->
-    gearman.registerWorker 'test_error', (payload, worker) ->
-      worker.error()
+    @timeout 10000
+    worker = new Worker 'test_error', (payload, worker) ->
+      worker.emit 'fail'
+    , options
 
-    job = gearman.submitJob('test_error', 'error')
-    job.on 'error', (err) ->
-      assert err, 'job should have an error'
-      gearman.on 'idle', -> done()
-
-    job.on 'end', (err) ->
-      console.log 'DONE', err
-      assert false, 'job should not have ended'
-
-describe 'job timeout', ->
-  gearman = null
-  beforeEach (done) ->
-    gearman = new Gearman('localhost')
-    gearman.on 'connect', ->
+    client = new Client options
+    job = client.submitJob 'test_error'
+    job.on 'fail', (handle) ->
+      worker.disconnect()
+      client.disconnect()
       done()
-    gearman.on 'error', (e) ->
-      console.log e.message
-    gearman.connect()
-    gearman.registerWorker 'test', (payload, worker) ->
-      setTimeout (->
-        worker.success 'OK'
-      ), 300
 
-  afterEach (done) ->
-    gearman.on 'close', ->
+  it 'allows for worker success with warning message', (done) ->
+    @timeout 10000
+    worker = new Worker 'test_complete_warning', (payload, worker) ->
+      worker.emit 'warning', 'WARN!!'
+      worker.emit 'complete', 'completion data'
+    , options
+
+    client = new Client options
+    job = client.submitJob 'test_complete_warning'
+    job.on 'warning', (handle, warning) ->
+      assert.equal warning, 'WARN!!', "bad warning message"
+    job.on 'complete', (handle, data) ->
+      assert.equal data, 'completion data', "bad job data on completion"
       done()
-    gearman.close()
 
-  it 'generates event', (done) ->
-    job = gearman.submitJob('test', 'test')
-    job.setTimeout 100
-    job.on 'timeout', ->
-      assert true
+  it 'allows for worker pre-completion messages: data and status', (done) ->
+    @timeout 10000
+    data_msgs = ['started','halfway','done']
+    status_msgs = [[0,100],[50,100],[100,100]]
+    worker = new Worker 'test_data_status', (payload, worker) ->
+      async.forEachSeries [0,1,2], (i, cb_fe) ->
+        worker.emit 'data', data_msgs[i]
+        worker.emit 'status', status_msgs[i][0], status_msgs[i][1]
+        setTimeout cb_fe, 1000
+      , () ->
+        worker.emit 'complete', 'completion data'
+    , options
+
+    client = new Client options
+    job = client.submitJob 'test_data_status'
+    data_i = 0
+    status_i = 0
+    job.on 'data', (handle, data) ->
+      assert.equal data, data_msgs[data_i], "data message didn't match"
+      data_i += 1
+    job.on 'status', (handle, num, den) ->
+      assert.deepEqual [num,den], status_msgs[status_i], "status message didn't match"
+      status_i += 1
+    job.on 'complete', (handle, data) ->
+      assert.equal data, 'completion data', "bad job data on completion"
       done()
-    job.on 'error', (err) ->
-      assert false, 'job should not generate error'
-    job.on 'end', (err) ->
-      assert false, 'job should not complete'
 
-  it 'has timeout callback', (done) ->
-    job = gearman.submitJob('test', 'test')
-    job.setTimeout 100, ->
-      assert true, 'timeout occured'
-      done()
-    job.on 'error', (err) ->
-      assert false, 'job should not generate error'
-    job.on 'end', (err) ->
-      assert false, 'job should not complete'
+###
 
-  it 'timeout does not occur', (done) ->
-    job = gearman.submitJob('test', 'test')
-    job.setTimeout 400, ->
-      assert false, 'timeout occured'
-    job.on 'error', (err) ->
-      assert false, 'job should not fail'
-    job.on 'end', (err) ->
-      assert true, 'job completed before timeout'
+describe 'worker timeout', ->
+  it 'timeout happens before job complete', (done)->
+    @timeout 10000
+    worker = new Worker 'test_1s_timeout', (payload, worker) ->
+      setTimeout () ->
+        worker.emit 'complete'
+      , 3000
+    , _.extend options, timeout: 1000
+
+    client = new Client options
+    job = client.submitJob 'test_1s_timeout'
+    job.on 'complete', (handle, data) ->
+      assert false, 'job should timeout'
+    job.on 'fail', (handle) ->
+      worker.disconnect()
+      client.disconnect()
       done()
