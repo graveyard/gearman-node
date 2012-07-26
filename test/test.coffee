@@ -34,7 +34,7 @@ describe 'worker and client', ->
     data2 = new Buffer([ 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255 ])
     worker = new Worker 'test', (payload, worker) ->
       assert.equal payload.toString('base64'), data1.toString('base64')
-      worker.emit 'complete', data2
+      worker.complete data2
     , options
 
     client = new Client options
@@ -51,7 +51,7 @@ describe 'worker and client', ->
     worker_data = { 'test worker': 'test' }
     worker = new Worker 'test_json', (payload, worker) ->
       assert.deepEqual JSON.parse(payload), payload_data
-      worker.emit 'complete', JSON.stringify(worker_data)
+      worker.complete JSON.stringify(worker_data)
     , options
 
     client = new Client options
@@ -62,14 +62,45 @@ describe 'worker and client', ->
       client.disconnect()
       done()
 
-  it 'allows for worker failure', (done) ->
+  it 'allows for worker failure without message', (done) ->
     @timeout 10000
-    worker = new Worker 'test_error', (payload, worker) ->
-      worker.emit 'fail'
+    worker = new Worker 'test_fail', (payload, worker) ->
+      worker.fail()
     , options
 
     client = new Client options
-    job = client.submitJob 'test_error'
+    job = client.submitJob 'test_fail'
+    job.on 'fail', (handle) ->
+      worker.disconnect()
+      client.disconnect()
+      done()
+
+  it 'allows for worker failure with warning message', (done) ->
+    @timeout 10000
+    worker = new Worker 'test_fail_message', (payload, worker) ->
+      worker.warning('heyo')
+      worker.fail()
+    , options
+
+    client = new Client options
+    job = client.submitJob 'test_fail_message'
+    job.on 'warning', (handle, warning) ->
+      assert.equal warning, 'heyo'
+    job.on 'fail', (handle) ->
+      worker.disconnect()
+      client.disconnect()
+      done()
+
+  it 'allows for worker failure with warning message 2', (done) ->
+    @timeout 10000
+    worker = new Worker 'test_fail_message2', (payload, worker) ->
+      worker.error('heyo')
+    , options
+
+    client = new Client options
+    job = client.submitJob 'test_fail_message2'
+    job.on 'warning', (handle, warning) ->
+      assert.equal warning, 'heyo'
     job.on 'fail', (handle) ->
       worker.disconnect()
       client.disconnect()
@@ -78,8 +109,8 @@ describe 'worker and client', ->
   it 'allows for worker success with warning message', (done) ->
     @timeout 10000
     worker = new Worker 'test_complete_warning', (payload, worker) ->
-      worker.emit 'warning', 'WARN!!'
-      worker.emit 'complete', 'completion data'
+      worker.warning 'WARN!!'
+      worker.complete 'completion data'
     , options
 
     client = new Client options
@@ -96,11 +127,11 @@ describe 'worker and client', ->
     status_msgs = [[0,100],[50,100],[100,100]]
     worker = new Worker 'test_data_status', (payload, worker) ->
       async.forEachSeries [0,1,2], (i, cb_fe) ->
-        worker.emit 'data', data_msgs[i]
-        worker.emit 'status', status_msgs[i][0], status_msgs[i][1]
+        worker.data data_msgs[i]
+        worker.status status_msgs[i][0], status_msgs[i][1]
         setTimeout cb_fe, 1000
       , () ->
-        worker.emit 'complete', 'completion data'
+        worker.complete 'completion data'
     , options
 
     client = new Client options
@@ -124,7 +155,7 @@ describe 'worker timeout', ->
     @timeout 10000
     worker = new Worker 'test_1s_timeout', (payload, worker) ->
       setTimeout () ->
-        worker.emit 'complete'
+        worker.complete()
       , 3000
     , _.extend options, timeout: 1000
 

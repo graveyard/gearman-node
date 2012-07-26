@@ -117,11 +117,10 @@ JOB_ASSIGN_UNIQ
 #
 # worker = new Worker 'reverse', (payload, worker) ->
 #   if not payload
-#     worker.emit 'warning', "No payload"
-#     worker.emit 'fail'
+#     worker.error "No payload"
 #     return
 #   reversed = ((payload.toString "utf-8").split "").reverse().join ""
-#   worker.emit 'complete', reversed
+#   worker.complete reversed
 
 Gearman = require './gearman'
 _ = require 'underscore'
@@ -144,17 +143,25 @@ class Worker extends Gearman
     @on 'JOB_ASSIGN', @receiveJob.bind @
     @connect()
 
+  # helper fns exposed to worker function
+  class WorkerHelper extends EventEmitter
+    constructor: (@parent, @handle) ->
+    warning: (warning) -> @parent.sendCommand 'WORK_WARNING', @handle, warning
+    status: (num, den) -> @parent.sendCommand 'WORK_STATUS', @handle, num, den
+    data: (data) -> @parent.sendCommand 'WORK_DATA', @handle, data
+    fail: () ->
+      @parent.sendCommand 'WORK_FAIL', @handle
+      @parent.sendCommand 'GRAB_JOB'
+    error: (warning) ->
+      @warning warning
+      @parent.sendCommand 'WORK_FAIL', @handle
+      @parent.sendCommand 'GRAB_JOB'
+    complete: (data) ->
+      @parent.sendCommand 'WORK_COMPLETE', @handle, data
+      @parent.sendCommand 'GRAB_JOB'
+
   receiveJob: (handle, name, payload) ->
-    worker = new EventEmitter
-    worker.on 'warning', (w)       => @sendCommand 'WORK_WARNING', handle, w
-    worker.on 'status',  (num,den) => @sendCommand 'WORK_STATUS', handle, num, den
-    worker.on 'data',    (data)    => @sendCommand 'WORK_DATA', handle, data
-    worker.on 'fail', () =>
-      @sendCommand 'WORK_FAIL', handle
-      @sendCommand 'GRAB_JOB'
-    worker.on 'complete', (data) =>
-      @sendCommand 'WORK_COMPLETE', handle, data
-      @sendCommand 'GRAB_JOB'
-    @fn payload, worker
+    @fn payload, new WorkerHelper(@,handle)
+
 
 module.exports = Worker
