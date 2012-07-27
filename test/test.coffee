@@ -65,7 +65,7 @@ describe 'worker and client', ->
   it 'allows for worker failure without message', (done) ->
     @timeout 10000
     worker = new Worker 'test_fail', (payload, worker) ->
-      worker.fail()
+      worker.error()
     , options
 
     client = new Client options
@@ -79,7 +79,7 @@ describe 'worker and client', ->
     @timeout 10000
     worker = new Worker 'test_fail_message', (payload, worker) ->
       worker.warning('heyo')
-      worker.fail()
+      worker.error()
     , options
 
     client = new Client options

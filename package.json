@@ -20,6 +20,6 @@
     "mocha": "~1.2.2"
   },
   "scripts": {
-    "test": "node_modules/mocha/bin/mocha --compilers coffee:coffee-script test/test.coffee"
+    "test": "make -B test"
   }
 }

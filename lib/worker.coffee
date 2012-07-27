@@ -148,12 +148,9 @@ class Worker extends Gearman
     constructor: (@parent, @handle) ->
     warning: (warning) -> @parent.sendCommand 'WORK_WARNING', @handle, warning
     status: (num, den) -> @parent.sendCommand 'WORK_STATUS', @handle, num, den
-    data: (data) -> @parent.sendCommand 'WORK_DATA', @handle, data
-    fail: () ->
-      @parent.sendCommand 'WORK_FAIL', @handle
-      @parent.sendCommand 'GRAB_JOB'
+    data: (data)       -> @parent.sendCommand 'WORK_DATA', @handle, data
     error: (warning) ->
-      @warning warning
+      @warning warning if warning?
       @parent.sendCommand 'WORK_FAIL', @handle
       @parent.sendCommand 'GRAB_JOB'
     complete: (data) ->
@@ -162,6 +159,5 @@ class Worker extends Gearman
 
   receiveJob: (handle, name, payload) ->
     @fn payload, new WorkerHelper(@,handle)
-
 
 module.exports = Worker

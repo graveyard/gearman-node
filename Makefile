@@ -6,4 +6,4 @@ test-cov:
 	open coverage.html
 
 test:
-	node_modules/mocha/bin/mocha --compilers coffee:coffee-script test/test.coffee | tee coverage.html
+	node_modules/mocha/bin/mocha --compilers coffee:coffee-script test/test.coffee
