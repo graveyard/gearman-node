@@ -156,6 +156,11 @@ class Worker extends Gearman
     complete: (data) ->
       @parent.sendCommand 'WORK_COMPLETE', @handle, data
       @parent.sendCommand 'GRAB_JOB'
+    done: (err) ->
+      if err?
+        @error(err)
+      else
+        @complete()
 
   receiveJob: (handle, name, payload) ->
     @fn payload, new WorkerHelper(@,handle)

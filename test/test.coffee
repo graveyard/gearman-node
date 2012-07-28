@@ -148,6 +148,36 @@ describe 'worker and client', ->
       assert.equal data, 'completion data', "bad job data on completion"
       done()
 
+  it 'worker.done is worker.error if sent an argument', (done) ->
+    @timeout 10000
+    worker = new Worker 'test_done_error', (payload, worker) ->
+      worker.done 'error'
+    , options
+
+    client = new Client options
+    job = client.submitJob 'test_done_error'
+    warning = null
+    job.on 'warning', (handle, _warning) ->
+      warning = _warning
+    job.on 'fail', (handle, data) ->
+      assert.equal warning, 'error', "bad warning message"
+      done()
+
+  it 'worker.done is worker.complete if no argument sent', (done) ->
+    @timeout 10000
+    worker = new Worker 'test_done_complete', (payload, worker) ->
+      worker.done()
+    , options
+
+    client = new Client options
+    job = client.submitJob 'test_done_complete'
+    warning = null
+    job.on 'warning', (handle, _warning) ->
+      warning = _warning
+    job.on 'complete', (handle, data) ->
+      assert.equal warning, null, "should not have gotten a  warning"
+      done()
+
 ###
 
 describe 'worker timeout', ->
