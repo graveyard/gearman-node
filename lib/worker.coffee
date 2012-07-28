@@ -146,17 +146,17 @@ class Worker extends Gearman
   # helper fns exposed to worker function
   class WorkerHelper extends EventEmitter
     constructor: (@parent, @handle) ->
-    warning: (warning) -> @parent.sendCommand 'WORK_WARNING', @handle, warning
-    status: (num, den) -> @parent.sendCommand 'WORK_STATUS', @handle, num, den
-    data: (data)       -> @parent.sendCommand 'WORK_DATA', @handle, data
-    error: (warning) ->
+    warning: (warning) => @parent.sendCommand 'WORK_WARNING', @handle, warning
+    status: (num, den) => @parent.sendCommand 'WORK_STATUS', @handle, num, den
+    data: (data)       => @parent.sendCommand 'WORK_DATA', @handle, data
+    error: (warning) =>
       @warning warning if warning?
       @parent.sendCommand 'WORK_FAIL', @handle
       @parent.sendCommand 'GRAB_JOB'
-    complete: (data) ->
+    complete: (data) =>
       @parent.sendCommand 'WORK_COMPLETE', @handle, data
       @parent.sendCommand 'GRAB_JOB'
-    done: (err) ->
+    done: (err) =>
       if err?
         @error(err)
       else
