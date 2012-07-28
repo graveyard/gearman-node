@@ -113,7 +113,7 @@ class Client extends Gearman
       delete @jobs[handle]
     @connect()
 
-  submitJob: (name, payload) ->
+  submitJob: (name, payload) =>
     job = new EventEmitter
     @on 'JOB_CREATED', (handle) =>
       @jobs[handle] = job

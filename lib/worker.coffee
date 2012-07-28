@@ -162,7 +162,7 @@ class Worker extends Gearman
       else
         @complete()
 
-  receiveJob: (handle, name, payload) ->
+  receiveJob: (handle, name, payload) =>
     @fn payload, new WorkerHelper(@,handle)
 
 module.exports = Worker
