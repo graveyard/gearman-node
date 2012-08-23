@@ -115,7 +115,7 @@ class Client extends Gearman
 
   submitJob: (name, payload) =>
     job = new EventEmitter
-    @on 'JOB_CREATED', (handle) =>
+    @once 'JOB_CREATED', (handle) =>
       @jobs[handle] = job
       job.emit 'created', handle
     @sendCommand "SUBMIT_JOB", name, false, payload

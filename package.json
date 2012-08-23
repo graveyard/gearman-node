@@ -1,6 +1,6 @@
 {
   "name": "gearman-coffee",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "gearman bindings dun' right",
   "author": "Clever <gearman-coffee@getclever.com>",
   "repository": {
