@@ -42,7 +42,7 @@ worker = new Worker 'unstable', (payload, worker) ->
 
 Clients are used to submit work to Gearman. By default they connect to Gearman at `localhost:4730`:
 
-```
+```coffeescript
 default_options =
   host: 'localhost'
   port: 4730
@@ -52,7 +52,7 @@ client = new Client default_options
 
 The `submitJob` method of the client takes in the name of the worker and the workload you'd like to send. It returns an EventEmitter that relays Gearman server notifications:
 
-```
+```coffeescript
 client.submitJob('reverse', 'kitteh')
   .on 'created', (handle) ->          # JOB_CREATED
   .on 'data', (handle, data) ->       # WORK_DATA
