@@ -8,7 +8,7 @@ async = require 'async'
 options =
   host: 'localhost'
   port: 4730
-  debug: false
+  debug: true
 
 describe 'slam it', ->
   it 'can handle a ton of jobs', (done) ->

@@ -8,4 +8,4 @@ test-cov:
 
 test:
 	./reset_gearmand.sh
-	node_modules/mocha/bin/mocha --compilers coffee:coffee-script test/{test,test--raceconditions}.coffee
+	node_modules/mocha/bin/mocha --compilers coffee:coffee-script test/{test,test-raceconditions}.coffee
