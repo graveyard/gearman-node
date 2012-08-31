@@ -1,147 +1,67 @@
-gearman-coffee
-==============
+# gearman-coffee
 
-**gearman-coffee** is a rewrite of of **[node-gearman](https://github.com/andris9/node-gearman)** in CoffeeScript that adds additional administrative functions as well as more verbose error handling.
+**gearman-coffee** is an implementation of the Gearman protocol in CoffeeScript. It exposes a conventional Node library for creating Gearman workers and clients, and listening for events related to both. It aims to be a very a lightweight wrapper around the protocol itself.
 
-## Connect to a Gearman server
+## Workers
 
-Set up connection data and create a new `Gearman` object
+Workers are created with the name and function that they perform:
 
-    Gearman = require "gearman-coffee"
-    gearman = new Gearman hostname, port
+```coffeescript
+worker = new Worker 'reverse', (payload, worker) ->
+  return worker.error "No payload" if not payload?
+  reversed = ((payload.toString "utf-8").split "").reverse().join ""
+  worker.complete reversed
+```
 
-Where `hostname` defaults to `"localhost"` and `port` to `4730`
+The worker function itself is passed an object that contains the following convenience methods:
 
-This doesn't actually create the connection yet. Connection is created when needed but you can force it with `gearman.connect()`
+ * `warning(warning)`: sends a 'WORK_WARNING' packet
+ * `status(num,den)`: sends a 'WORK_STATUS' packet
+ * `data(data)`: sends a 'WORK_DATA' packet
+ * `error([warning])`: sends an optional 'WORK_WARNING' before 'WORK_FAIL'
+ * `complete([data])`: sends an optional 'WORK_DATA' before 'WORK_COMPLETE'
+ * `done([warning])`: calls `error` if warning passed, otherwise `complete`
 
-    gearman = new Gearman hostname, port
-    gearman.connect()
+The exact meaning of these is best documented on the Gearman website itself: [http://gearman.org/index.php?id=protocol](http://gearman.org/index.php?id=protocol).
 
-## Connection events
+Workers optionally take a hash of options. These options control the Gearman server connection settings as well as debug output and retry behavior:
 
-The following events can be listened for a `Gearman` object:
+```coffeescript
+default_options =
+  host: 'localhost'
+  port: 4730
+  debug: false
+  max_retries: 0
+worker = new Worker 'unstable', (payload, worker) ->
+  return worker.error() if Math.random() < 0.5
+  worker.done 'success'
+, default_options
+```
 
-  * **connect** - when the connection has been successfully established to the server
-  * **idle** - when there's no jobs available for workers
-  * **close** - connection closed
-  * **error** - an error occured. Connection is automatically closed.
+## Clients
 
-Example:
+Clients are used to submit work to Gearman. By default they connect to Gearman at `localhost:4730`:
 
-    gearman = new Gearman hostname, port
-    gearman.on "connect", () ->
-        console.log "Connected to the server!"
-    gearman.connect();
+```
+default_options =
+  host: 'localhost'
+  port: 4730
+  debug: false
+client = new Client default_options
+```
 
-## Submit a job
+The `submitJob` method of the client takes in the name of the worker and the workload you'd like to send. It returns an EventEmitter that relays Gearman server notifications:
 
-Jobs can be submitted with `gearman.submitJob name, payload` where `name` is the name of the function and `payload` is a string or a Buffer. The returned object (Event Emitter) can be used to detect job status and has the following events:
+```
+client.submitJob('reverse', 'kitteh')
+  .on 'created', (handle) ->          # JOB_CREATED
+  .on 'data', (handle, data) ->       # WORK_DATA
+  .on 'warning', (handle, warning) -> # WORK_WARNING
+  .on 'status', (handle, num, den) -> # WORK_STATUS
+  .on 'complete', (handle, data) ->   # WORK_COMPLETE
+  .on 'fail', (handle) ->             # WORK_FAIL
+```
 
-  * **error** - job failed - has parameter unhelpful error message and job handle
-    * **NOTE: to pass error messages from worker to client, have the worker emit a warning and then fail**
-  * **warn** - job issued a warning - has parameters warning message and job handle
-  * **data** - job passed back data - has parameters a chunk of data as a Buffer and job handle
-  * **end** - job completed - has parameter job handle
-  * **timeout** - job canceled due to timeout - has parameter job handle
-
-Example:
-
-    gearman = new Gearman hostname, port
-    job = gearman.submitJob "reverse", "test string"
-
-    job.on "data", (data, handle) ->
-        console.log data.toString "utf-8" # gnirts tset
-
-    job.on "end", (handle) ->
-        console.log "Job completed!"
-
-    job.on "error", (unhelpful_err_message, handle) ->
-        console.log "Error!"
-
-## Setup a worker
-
-Workers can be set up with `gearman.registerWorker name, callback` where `name` is the name of the function and `callback` is the function to be run when a job is received.
-
-Worker function `callback` gets two parameters - `payload` (received data as a Buffer) and `worker` which is a helper object to communicate with the server. `worker` object has following methods:
-
-  * **write(data)** - sends data chunks to the client
-  * **end([data])** - completes the job
-  * **warn(message)** - sends a warning message to the client
-  * **error()** to indicate that the job failed
-  * **done([err])** shorthand for calling a waring+error if there's an err, else calling end with no data
-
-Example:
-
-    gearman = new Gearman hostname, port
-
-    gearman.registerWorker "reverse", (payload, worker) ->
-        if not payload
-          worker.warn "No payload"
-          worker.error()
-          return
-        
-        reversed = ((payload.toString "utf-8").split "").reverse().join ""
-        worker.end reversed
-
-## Job timeout
-
-You can set an optional timeout value (in milliseconds) for a job to abort it automatically when the timeout occurs.
-
-Timeout automatically aborts further processing of the job.
-
-    job.setTimeout timeout[, timeoutCallback]
-
-If `timeoutCallback` is not set, a `'timeout'` event is emitted on timeout.
-
-    job.setTimeout 10*1000 # timeout in 10 secs
-    job.on "timeout", (handle) ->
-        console.log "Timeout exceeded for the worker. Job aborted."
-
-## Close connection
-
-You can close the Gearman connection with `close()`
-
-    gearman = new Gearman()
-    ...
-    gearman.close()
-
-The connection is closed when a `'close'` event for the Gearman object is emitted
-
-    gearman.on "close", () ->
-        console.log "Connection closed"
-    
-    gearman.close()
-
-## Streaming
-
-Worker and job objects also act as Stream objects (workers are writable and jobs readable streams), so you can stream data with `pipe` from a worker to a client (but not the other way round). This is useful for zipping/unzipping etc.
-
-**NB!** Streaming support is experimental, do not send very large files as the data tends to clutter up (workers stream interface lacks support for pausing etc.).
-
-**Streaming worker**
-
-    gearman.registerWorker "stream_file", (payload, worker) ->
-        input = fs.createReadStream filepath
-        # stream file to client
-        input.pipe worker
-
-**Streaming client**
-
-    job = gearman.submitJob "stream", null
-    output = fs.createWriteStream filepath
-    
-    # save incoming stream to file
-    job.pipe output
-
-## Run tests
-
-Run the tests with
-
-    npm test
-    
-or alternatively
-
-    node run_tests.js
 ## License
 
-**MIT**
+MIT
