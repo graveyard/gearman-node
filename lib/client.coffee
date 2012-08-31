@@ -115,16 +115,19 @@ class Client extends Gearman
       delete @jobs[handle]
     @connect()
 
-  push: () =>
-    @queue.push arguments
+  push: (name, payload, job) =>
+    @queue.push [name, payload, job]
+    job
   pop: () =>
-    args = @queue.pop arguments
-    @submitJob.apply @, args[0]
+    args = @queue.shift()
+    @submitJob args[0], args[1], args[2]
 
-  submitJob: (name, payload) =>
-    return @push arguments if @submitting
+  submitJob: (name, payload, job=null) =>
+    job = new EventEmitter if not job?
+    if @submitting
+      @push [name, payload, job]
+      return job
     @submitting = true
-    job = new EventEmitter
     @once 'JOB_CREATED', (handle) =>
       @jobs[handle] = job
       job.emit 'created', handle
