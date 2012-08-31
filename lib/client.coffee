@@ -96,6 +96,8 @@ EventEmitter = require("events").EventEmitter
 
 class Client extends Gearman
   constructor: (@options) ->
+    @queue = []
+    @submitting = false
     @options = _.defaults (@options or {}),
       host: 'localhost'
       port: 4730
@@ -113,11 +115,21 @@ class Client extends Gearman
       delete @jobs[handle]
     @connect()
 
+  push: () =>
+    @queue.push arguments
+  pop: () =>
+    args = @queue.pop arguments
+    @submitJob.apply @, args[0]
+
   submitJob: (name, payload) =>
+    return @push arguments if @submitting
+    @submitting = true
     job = new EventEmitter
     @once 'JOB_CREATED', (handle) =>
       @jobs[handle] = job
       job.emit 'created', handle
+      @submitting = false
+      process.nextTick @pop if @queue.length
     @sendCommand "SUBMIT_JOB", name, false, payload
     job
 
