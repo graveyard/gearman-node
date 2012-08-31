@@ -113,15 +113,6 @@ JOB_ASSIGN_UNIQ
 
 ###
 
-# usage:
-#
-# worker = new Worker 'reverse', (payload, worker) ->
-#   if not payload
-#     worker.error "No payload"
-#     return
-#   reversed = ((payload.toString "utf-8").split "").reverse().join ""
-#   worker.complete reversed
-
 Gearman = require './gearman'
 _ = require 'underscore'
 EventEmitter = require("events").EventEmitter

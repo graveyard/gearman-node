@@ -97,14 +97,18 @@ EventEmitter = require("events").EventEmitter
 class Client extends Gearman
   constructor: (@options) ->
     @queue = []
-    @submitting = false
     @options = _.defaults (@options or {}),
       host: 'localhost'
       port: 4730
       debug: false
     super @options.host, @options.port, @options.debug
     @jobs = {} # map from job handle to emitter returned to user of this class
-    @on 'WORK_DATA',     (handle, data)     => @jobs[handle].emit 'data', handle, "#{data}"
+    @on 'JOB_CREATED', (handle) =>
+      job = @queue.shift()
+      @jobs[handle] = job
+      job.emit 'created', handle
+    @on 'WORK_DATA',     (handle, data)     =>
+      @jobs[handle].emit 'data', handle, "#{data}"
     @on 'WORK_WARNING',  (handle, warning)  => @jobs[handle].emit 'warning', handle, "#{warning}"
     @on 'WORK_STATUS',   (handle, num, den) => @jobs[handle].emit 'status', handle, num, den
     @on 'WORK_COMPLETE', (handle, data) =>
@@ -115,24 +119,9 @@ class Client extends Gearman
       delete @jobs[handle]
     @connect()
 
-  push: (name, payload, job) =>
-    @queue.push [name, payload, job]
-    job
-  pop: () =>
-    args = @queue.shift()
-    @submitJob args[0], args[1], args[2]
-
-  submitJob: (name, payload, job=null) =>
-    job = new EventEmitter if not job?
-    if @submitting
-      @push [name, payload, job]
-      return job
-    @submitting = true
-    @once 'JOB_CREATED', (handle) =>
-      @jobs[handle] = job
-      job.emit 'created', handle
-      @submitting = false
-      process.nextTick @pop if @queue.length
+  submitJob: (name, payload) =>
+    job = new EventEmitter
+    @queue.push job
     @sendCommand "SUBMIT_JOB", name, false, payload
     job
 
