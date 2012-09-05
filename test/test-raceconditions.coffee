@@ -35,7 +35,6 @@ describe 'slam it', ->
     workers.push(new Worker 'slammer', worker_fn, options) for i in [1..25]
 
     client = new Client options
-    finish = () ->
     async.forEach _(payloads).keys(), (key, cb_fe) ->
       payload = payloads[key]
       client.submitJob('slammer', JSON.stringify(payload)).on 'data', (handle, data) ->
