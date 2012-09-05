@@ -123,6 +123,9 @@ class Worker extends Gearman
       host: 'localhost'
       port: 4730
       debug: false
+      max_retries: 0 # default no retry
+    @retry_count = {}
+    @payloads = {}
     super @options.host, @options.port, @options.debug
     if @options.timeout?
       @sendCommand 'CAN_DO_TIMEOUT', @name, @options.timeout
@@ -153,7 +156,17 @@ class Worker extends Gearman
       else
         @complete()
 
+  # intercept WORK_FAIL and auto-retry. still not in love with this
+  sendCommand: (cmd_name, handle) =>
+    if (cmd_name is 'WORK_FAIL' and @retry_count[handle] < @options.max_retry_count[handle])
+      @retry_count[handle] += 1
+      @fn @payloads[handle], new WorkerHelper(@,handle)
+    else
+      super
+
   receiveJob: (handle, name, payload) =>
+    @retry_count[handle] = 0
+    @payloads[handle] = payload
     @fn payload, new WorkerHelper(@,handle)
 
 module.exports = Worker
