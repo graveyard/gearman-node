@@ -125,35 +125,35 @@ class Worker extends Gearman
       debug: false
     super @options.host, @options.port, @options.debug
     if @options.timeout?
-      @sendCommand 'CAN_DO_TIMEOUT', @name, @options.timeout
+      @send 'CAN_DO_TIMEOUT', @name, @options.timeout
     else
-      @sendCommand 'CAN_DO', @name
-    @sendCommand 'GRAB_JOB'
-    @on 'NO_JOB', () => @sendCommand 'PRE_SLEEP' # will be woken up by noop
-    @on 'NOOP', () => @sendCommand 'GRAB_JOB'    # woken up!
-    @on 'JOB_ASSIGN', @receiveJob.bind @
+      @send 'CAN_DO', @name
+    @send 'GRAB_JOB'
+    @on 'NO_JOB', () => @send 'PRE_SLEEP' # will be woken up by noop
+    @on 'NOOP', () => @send 'GRAB_JOB'    # woken up!
+    @on 'JOB_ASSIGN', @receive_job
     @connect()
 
   # helper fns exposed to worker function
   class WorkerHelper extends EventEmitter
     constructor: (@parent, @handle) ->
-    warning: (warning) => @parent.sendCommand 'WORK_WARNING', @handle, warning
-    status: (num, den) => @parent.sendCommand 'WORK_STATUS', @handle, num, den
-    data: (data)       => @parent.sendCommand 'WORK_DATA', @handle, data
+    warning: (warning) => @parent.send 'WORK_WARNING', @handle, warning
+    status: (num, den) => @parent.send 'WORK_STATUS', @handle, num, den
+    data: (data)       => @parent.send 'WORK_DATA', @handle, data
     error: (warning) =>
       @warning warning if warning?
-      @parent.sendCommand 'WORK_FAIL', @handle
-      @parent.sendCommand 'GRAB_JOB'
+      @parent.send 'WORK_FAIL', @handle
+      @parent.send 'GRAB_JOB'
     complete: (data) =>
-      @parent.sendCommand 'WORK_COMPLETE', @handle, data
-      @parent.sendCommand 'GRAB_JOB'
+      @parent.send 'WORK_COMPLETE', @handle, data
+      @parent.send 'GRAB_JOB'
     done: (err) =>
       if err?
         @error(err)
       else
         @complete()
 
-  receiveJob: (handle, name, payload) =>
+  receive_job: (handle, name, payload) =>
     @fn payload, new WorkerHelper(@,handle)
 
 module.exports = Worker

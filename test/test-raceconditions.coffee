@@ -8,7 +8,7 @@ async = require 'async'
 options =
   host: 'localhost'
   port: 4730
-  debug: true
+  debug: process.env.DEBUG
 
 describe 'slam it', ->
   it 'can handle a ton of jobs', (done) ->
@@ -37,7 +37,7 @@ describe 'slam it', ->
     client = new Client options
     async.forEach _(payloads).keys(), (key, cb_fe) ->
       payload = payloads[key]
-      client.submitJob('slammer', JSON.stringify(payload)).on 'data', (handle, data) ->
+      client.submit_job('slammer', JSON.stringify(payload)).on 'data', (handle, data) ->
         assert.equal data, payload.data, "expected job #{key} to produce #{payload.data}, got #{data}"
       .on 'warning', (handle, warning) ->
         assert.equal warning, payload.warning, "expected job #{key} to produce warning #{payload.warning}, got #{warning}"

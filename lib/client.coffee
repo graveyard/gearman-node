@@ -82,7 +82,7 @@ OPTION_RES
 # usage:
 #
 # client = new Client
-# job = client.submitJob 'reverse', 'kitteh'
+# job = client.submit_job 'reverse', 'kitteh'
 # job.on 'created', (handle) -> ...
 # job.on 'data', (handle, data) -> ...
 # job.on 'status', (handle, numerator, denominator) -> ...
@@ -119,10 +119,10 @@ class Client extends Gearman
       delete @jobs[handle]
     @connect()
 
-  submitJob: (name, payload) =>
+  submit_job: (name, payload) =>
     job = new EventEmitter
     @queue.push job
-    @sendCommand "SUBMIT_JOB", name, false, payload
+    @send "SUBMIT_JOB", name, false, payload
     job
 
 module.exports = Client

@@ -8,7 +8,7 @@ async = require 'async'
 options =
   host: 'localhost'
   port: 4730
-  debug: true
+  debug: process.env.DEBUG
 
 describe 'connection', ->
   gearman = null
@@ -38,7 +38,7 @@ describe 'worker and client', ->
     , options
 
     client = new Client options
-    job = client.submitJob 'test', data1
+    job = client.submit_job 'test', data1
     job.on 'complete', (handle, data) ->
       assert.equal data.toString('base64'), data2.toString('base64')
       worker.disconnect()
@@ -55,7 +55,7 @@ describe 'worker and client', ->
     , options
 
     client = new Client options
-    job = client.submitJob 'test_json', JSON.stringify(payload_data)
+    job = client.submit_job 'test_json', JSON.stringify(payload_data)
     job.on 'complete', (handle, data) ->
       assert.deepEqual JSON.parse(data), worker_data
       worker.disconnect()
@@ -69,7 +69,7 @@ describe 'worker and client', ->
     , options
 
     client = new Client options
-    job = client.submitJob 'test_fail'
+    job = client.submit_job 'test_fail'
     job.on 'fail', (handle) ->
       worker.disconnect()
       client.disconnect()
@@ -83,7 +83,7 @@ describe 'worker and client', ->
     , options
 
     client = new Client options
-    job = client.submitJob 'test_fail_message'
+    job = client.submit_job 'test_fail_message'
     job.on 'warning', (handle, warning) ->
       assert.equal warning, 'heyo'
     job.on 'fail', (handle) ->
@@ -98,7 +98,7 @@ describe 'worker and client', ->
     , options
 
     client = new Client options
-    job = client.submitJob 'test_fail_message2'
+    job = client.submit_job 'test_fail_message2'
     job.on 'warning', (handle, warning) ->
       assert.equal warning, 'heyo'
     job.on 'fail', (handle) ->
@@ -114,7 +114,7 @@ describe 'worker and client', ->
     , options
 
     client = new Client options
-    job = client.submitJob 'test_complete_warning'
+    job = client.submit_job 'test_complete_warning'
     job.on 'warning', (handle, warning) ->
       assert.equal warning, 'WARN!!', "bad warning message"
     job.on 'complete', (handle, data) ->
@@ -135,7 +135,7 @@ describe 'worker and client', ->
     , options
 
     client = new Client options
-    job = client.submitJob 'test_data_status'
+    job = client.submit_job 'test_data_status'
     data_i = 0
     status_i = 0
     job.on 'data', (handle, data) ->
@@ -155,7 +155,7 @@ describe 'worker and client', ->
     , options
 
     client = new Client options
-    job = client.submitJob 'test_done_error'
+    job = client.submit_job 'test_done_error'
     warning = null
     job.on 'warning', (handle, _warning) ->
       warning = _warning
@@ -170,7 +170,7 @@ describe 'worker and client', ->
     , options
 
     client = new Client options
-    job = client.submitJob 'test_done_complete'
+    job = client.submit_job 'test_done_complete'
     warning = null
     job.on 'warning', (handle, _warning) ->
       warning = _warning
@@ -190,7 +190,7 @@ describe 'worker timeout', ->
     , _.extend options, timeout: 1000
 
     client = new Client options
-    job = client.submitJob 'test_1s_timeout'
+    job = client.submit_job 'test_1s_timeout'
     job.on 'complete', (handle, data) ->
       assert false, 'job should timeout'
     job.on 'fail', (handle) ->
