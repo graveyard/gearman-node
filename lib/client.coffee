@@ -96,12 +96,8 @@ EventEmitter = require("events").EventEmitter
 
 class Client extends Gearman
   constructor: (@options) ->
+    super @options
     @queue = []
-    @options = _.defaults (@options or {}),
-      host: 'localhost'
-      port: 4730
-      debug: false
-    super @options.host, @options.port, @options.debug
     @jobs = {} # map from job handle to emitter returned to user of this class
     @on 'JOB_CREATED', (handle) =>
       job = @queue.shift()

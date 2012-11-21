@@ -7,6 +7,7 @@
 Workers are created with the name and function that they perform:
 
 ```coffeescript
+Worker = require('gearman-coffee').Worker
 worker = new Worker 'reverse', (payload, worker) ->
   return worker.error "No payload" if not payload?
   reversed = ((payload.toString "utf-8").split "").reverse().join ""
@@ -27,14 +28,11 @@ The exact meaning of these is best documented on the Gearman website itself: [ht
 Workers optionally take a hash of options. These options control the Gearman server connection settings as well as debug output and retry behavior:
 
 ```coffeescript
-default_options =
-  host: 'localhost'
-  port: 4730
-  debug: false
-  max_retries: 0
+Worker = require('gearman-coffee').Worker
+default_options = { host: 'localhost', port: 4730, debug: false }
 worker = new Worker 'unstable', (payload, worker) ->
-  return worker.error() if Math.random() < 0.5
-  worker.done 'success'
+  return worker.done('error') if Math.random() < 0.5
+  worker.done()
 , default_options
 ```
 
@@ -43,24 +41,61 @@ worker = new Worker 'unstable', (payload, worker) ->
 Clients are used to submit work to Gearman. By default they connect to Gearman at `localhost:4730`:
 
 ```coffeescript
-default_options =
-  host: 'localhost'
-  port: 4730
-  debug: false
+Worker = require('gearman-coffee').Client
+default_options = { host: 'localhost', port: 4730, debug: false }
 client = new Client default_options
 ```
 
-The `submitJob` method of the client takes in the name of the worker and the workload you'd like to send. It returns an EventEmitter that relays Gearman server notifications:
+The `submit` method of the client takes in the name of the worker and the workload you'd like to send. It returns an EventEmitter that relays Gearman server notifications:
 
 ```coffeescript
-client.submitJob('reverse', 'kitteh')
-  .on 'created', (handle) ->          # JOB_CREATED
-  .on 'data', (handle, data) ->       # WORK_DATA
-  .on 'warning', (handle, warning) -> # WORK_WARNING
-  .on 'status', (handle, num, den) -> # WORK_STATUS
-  .on 'complete', (handle, data) ->   # WORK_COMPLETE
-  .on 'fail', (handle) ->             # WORK_FAIL
+job = client.submit 'reverse', 'kitteh'
+job.on 'created', (handle) ->          # JOB_CREATED
+job.on 'data', (handle, data) ->       # WORK_DATA
+job.on 'warning', (handle, warning) -> # WORK_WARNING
+job.on 'status', (handle, num, den) -> # WORK_STATUS
+job.on 'complete', (handle, data) ->   # WORK_COMPLETE
+job.on 'fail', (handle) ->             # WORK_FAIL
 ```
+
+## One-level deeper
+
+The Worker and Client objects are built on top of a 'Gearman' class that exposes a node-like interface for doing raw sending/receiving of commands to/from gearmand. This class exposes a 'send' method for communicating to gearmand, and emits events when gearamnd responds.
+
+```coffeescript
+Gearman = require('gearman-coffee').Gearman
+default_options = { host: 'localhost', port: 4730, debug: false }
+gearman = new Gearman default_options
+gearman.connect()
+gearman.send 'SUBMIT_JOB', 'reverse', job_id, 'kitteh'
+gearman.on 'JOB_CREATED', (job_handle) -> ...
+```
+
+## Not deep enough?
+
+If you want to do raw packet encoding/decoding in the Gearman protocol format there's also a 'Protocol' class. One use case would be proxying gearmand in order to "sniff" packets going to/from gearmand:
+
+```coffeescript
+net = require 'net'
+Protocol = require('gearman-coffee').Protocol
+
+server = new net.Server()
+server.on 'connection', (ib_conn) ->
+  ob_decoder = new Protocol().decode
+  ob_decoder.on 'WORK_COMPLETE', (handle, data) -> console.log 'done with job!'
+  ob_conn = net.connect { host: 'localhost', port: 4730 }
+  ob_conn.on 'data', protocol.decode
+  ob_conn.on 'data', (data) ->
+    ib_conn.write data # relay gearman data back to inbound
+
+  ib_decoder = new Protocol().decode
+  ib_decoder.on 'SUBMIT_JOB', (name, id, data) -> console.log 'someone is submitting a job!'
+  ib_conn.on 'data', ib_decoder
+  ib_conn.on 'data', (data) ->
+    ob_conn.write data # relay inbound data to gearman
+```
+
+This could be useful for getting more information than what the Gearman admin protocol gives you or even extending the Gearman protocol.
 
 ## License
 

@@ -119,11 +119,7 @@ EventEmitter = require("events").EventEmitter
 
 class Worker extends Gearman
   constructor: (@name, @fn, @options) ->
-    @options = _.defaults (@options or {}),
-      host: 'localhost'
-      port: 4730
-      debug: false
-    super @options.host, @options.port, @options.debug
+    super @options
     if @options.timeout?
       @send 'CAN_DO_TIMEOUT', @name, @options.timeout
     else

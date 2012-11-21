@@ -13,7 +13,7 @@ options =
 describe 'connection', ->
   gearman = null
   before () ->
-    gearman = new Gearman(options.host, options.port, options.debug)
+    gearman = new Gearman options
     gearman.on 'error', (e) -> throw e
 
   it 'instantiates Gearman class', ->

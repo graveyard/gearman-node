@@ -24,7 +24,12 @@ uid = 0
 
 class Gearman extends Protocol
 
-  constructor: (@host='localhost', @port=4730, @debug=false) ->
+  constructor: (@options) ->
+    @options = _.defaults (@options or {}),
+      host: 'localhost'
+      port: 4730
+      debug: false
+    {@host, @port, @debug} = @options
     super @debug
     @uid = (uid += 1)
     @connected = @connecting = false
@@ -47,10 +52,10 @@ class Gearman extends Protocol
       @connected = true
       console.log "GEARMAN #{@uid}: connected!" if @debug
       @emit "connect"
-      @process_queue()
+      @_process_queue()
     @socket.on "end", @disconnect
     @socket.on "close", @disconnect
-    @socket.on "error", @error_handler
+    @socket.on "error", @_error_handler
     @socket.on 'data', @decode
 
   disconnect: =>
@@ -63,15 +68,15 @@ class Gearman extends Protocol
     console.log "GEARMAN #{@uid}: disconnected" if @debug
     @emit 'disconnect'
 
-  error_handler: (err) =>
+  _error_handler: (err) =>
     @emit "error", err
     @disconnect()
 
   send: =>
     @cmd_queue.push _(arguments).toArray()
-    @process_queue()
+    @_process_queue()
 
-  process_queue: () =>
+  _process_queue: () =>
     return if @cmd_queue.length is 0 or not @connected
     @_send.apply @, @cmd_queue.shift()
 
@@ -84,6 +89,6 @@ class Gearman extends Protocol
       console.log "GEARMAN #{@uid}: sending #{cmd} with #{args.length} arguments:"
       # console.log "\tbody: #{body}"
       console.log "\targ[#{i}]: ", "#{arg}", arg for arg, i in args
-    @socket.write buf, @process_queue
+    @socket.write buf, @_process_queue
 
 module.exports = Gearman
