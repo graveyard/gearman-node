@@ -25,7 +25,7 @@ The worker function itself is passed an object that contains the following conve
 
 The exact meaning of these is best documented on the Gearman website itself: [http://gearman.org/index.php?id=protocol](http://gearman.org/index.php?id=protocol).
 
-Workers optionally take a hash of options. These options control the Gearman server connection settings as well as debug output and retry behavior:
+Workers optionally take in options related to the server to connect to and whether to produce debug output:
 
 ```coffeescript
 Worker = require('gearman-coffee').Worker
@@ -60,7 +60,7 @@ job.on 'fail', (handle) ->             # WORK_FAIL
 
 ## One-level deeper
 
-The Worker and Client objects are built on top of a 'Gearman' class that exposes a node-like interface for doing raw sending/receiving of commands to/from gearmand. This class exposes a 'send' method for communicating to gearmand, and emits events when gearamnd responds.
+The Worker and Client objects are built on top of a `Gearman` class that exposes a node-like interface for doing raw sending/receiving of commands to/from gearmand. There is a 'send' method for communicating to gearmand, and events are emitted when gearmand responds.
 
 ```coffeescript
 Gearman = require('gearman-coffee').Gearman
@@ -73,7 +73,7 @@ gearman.on 'JOB_CREATED', (job_handle) -> ...
 
 ## Not deep enough?
 
-If you want to do raw packet encoding/decoding in the Gearman protocol format there's also a 'Protocol' class. One use case would be proxying gearmand in order to "sniff" packets going to/from gearmand:
+If you want to do raw packet encoding/decoding in the Gearman protocol format there's also a `Protocol` class. One use case would be proxying gearmand in order to "sniff" packets going to/from gearmand:
 
 ```coffeescript
 net = require 'net'
@@ -95,7 +95,7 @@ server.on 'connection', (ib_conn) ->
     ob_conn.write data # relay inbound data to gearman
 ```
 
-This could be useful for getting more information than what the Gearman admin protocol gives you or even extending the Gearman protocol.
+This could be useful for getting more information than what the Gearman admin protocol provides, or even extending the Gearman protocol itself.
 
 ## License
 
