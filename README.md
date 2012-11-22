@@ -81,6 +81,7 @@ Protocol = require('gearman-coffee').Protocol
 
 server = new net.Server()
 server.on 'connection', (ib_conn) ->
+  # sniff + proxy gearman responses
   ob_decoder = new Protocol().decode
   ob_decoder.on 'WORK_COMPLETE', (handle, data) -> console.log 'done with job!'
   ob_conn = net.connect { host: 'localhost', port: 4730 }
@@ -88,11 +89,14 @@ server.on 'connection', (ib_conn) ->
   ob_conn.on 'data', (data) ->
     ib_conn.write data # relay gearman data back to inbound
 
+  # sniff + proxy gearman requests
   ib_decoder = new Protocol().decode
   ib_decoder.on 'SUBMIT_JOB', (name, id, data) -> console.log 'someone is submitting a job!'
   ib_conn.on 'data', ib_decoder
   ib_conn.on 'data', (data) ->
     ob_conn.write data # relay inbound data to gearman
+
+server.listen proxy_port
 ```
 
 This could be useful for getting more information than what the Gearman admin protocol provides, or even extending the Gearman protocol itself.
