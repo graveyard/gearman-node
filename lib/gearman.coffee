@@ -18,6 +18,7 @@ netlib = require "net"
 EventEmitter = require("events").EventEmitter
 _ = require 'underscore'
 assert = require 'assert'
+nextTick = require('timers').setImmediate or process.nextTick
 
 uid = 0
 
@@ -240,6 +241,6 @@ class Gearman extends EventEmitter
     #  @["receive_#{commandName}"].apply @, args
 
     # potentially saw the end of a packet plus a complete new packet
-    process.nextTick @receive.bind @ if @remainder and @remainder.length >= 12
+    nextTick @receive.bind @ if @remainder and @remainder.length >= 12
 
 module.exports = Gearman
