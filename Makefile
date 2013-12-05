@@ -1,3 +1,8 @@
+TESTS=$(shell cd test && ls *.coffee | sed s/\.coffee$$//)
+.PHONY: test test-cov $(TESTS)
+
+test: $(TESTS)
+
 test-cov:
 	./reset_gearmand.sh
 	rm -rf lib-js lib-js-cov
@@ -6,6 +11,6 @@ test-cov:
 	COV_GEARMAN=1 node_modules/mocha/bin/mocha -R html-cov --compilers coffee:coffee-script test/{test,test-raceconditions}.coffee | tee coverage.html
 	open coverage.html
 
-test:
+$(TESTS):
 	./reset_gearmand.sh
-	node_modules/mocha/bin/mocha --compilers coffee:coffee-script test/{test,test-raceconditions}.coffee
+	DEBUG=* NODE_ENV=test node_modules/mocha/bin/mocha --timeout 60000 --compilers coffee:coffee-script test/$@.coffee

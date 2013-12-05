@@ -14,10 +14,10 @@
 # It also queues commands so that you don't have to wait for a connection. For
 # even more sugar around the protocol check out ./client and ./worker.
 
-netlib = require "net"
 EventEmitter = require("events").EventEmitter
 _ = require 'underscore'
 assert = require 'assert'
+reconnect = require 'reconnect'
 nextTick = require('timers').setImmediate or process.nextTick
 
 uid = 0
@@ -84,25 +84,29 @@ class Gearman extends EventEmitter
 
   connect: ->
     return if @connected or @connecting
-
     @connecting = true
     console.log "GEARMAN #{@uid}: connecting..." if @debug
-    @socket = (netlib.connect or netlib.createConnection) @port, @host
-
-    @socket.on "connect", =>
+    @reconnecter = reconnect (socket) =>
+      console.log "GEARMAN #{@uid}: connected!" if @debug
+      @socket = socket
+      @socket.on "error", @errorHandler.bind @
+      @socket.on "data", @receive.bind @
       @socket.setKeepAlive true
       @connecting = false
       @connected = true
-      console.log "GEARMAN #{@uid}: connected!" if @debug
       @emit "connect"
       @processCommandQueue()
-    @socket.on "end", @disconnect.bind @
-    @socket.on "close", @disconnect.bind @
-    @socket.on "error", @errorHandler.bind @
-    @socket.on "data", @receive.bind @
+    @reconnecter.on 'disconnect', =>
+      console.log "GEARMAN #{@uid}: disconnected" if @debug
+      @connected = false
+    @reconnecter.on 'reconnect', =>
+      console.log "GEARMAN #{@uid}: attempting reconnect!" if @debug
+      @connecting = true
+    @reconnecter.connect {host: @host, port: @port}
 
   disconnect: ->
     return if not @connected
+    @reconnecter.reconnect = false # user has explicitly requested a disconnect, so stop reconnecting
     @connected = false
     @connecting = false
     if @socket

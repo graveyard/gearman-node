@@ -178,22 +178,20 @@ describe 'worker and client', ->
       assert.equal warning, null, "should not have gotten a  warning"
       done()
 
-###
+# describe 'worker timeout', ->
+#   it 'timeout happens before job complete', (done)->
+#     @timeout 10000
+#     worker = new Worker 'test_1s_timeout', (payload, worker) ->
+#       setTimeout () ->
+#         worker.complete()
+#       , 3000
+#     , _.extend options, timeout: 1000
 
-describe 'worker timeout', ->
-  it 'timeout happens before job complete', (done)->
-    @timeout 10000
-    worker = new Worker 'test_1s_timeout', (payload, worker) ->
-      setTimeout () ->
-        worker.complete()
-      , 3000
-    , _.extend options, timeout: 1000
-
-    client = new Client options
-    job = client.submitJob 'test_1s_timeout'
-    job.on 'complete', (handle, data) ->
-      assert false, 'job should timeout'
-    job.on 'fail', (handle) ->
-      worker.disconnect()
-      client.disconnect()
-      done()
+#     client = new Client options
+#     job = client.submitJob 'test_1s_timeout'
+#     job.on 'complete', (handle, data) ->
+#       assert false, 'job should timeout'
+#     job.on 'fail', (handle) ->
+#       worker.disconnect()
+#       client.disconnect()
+#       done()
