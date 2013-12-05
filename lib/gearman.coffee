@@ -86,14 +86,13 @@ class Gearman extends EventEmitter
     @connecting = true
     console.log "GEARMAN #{@uid}: connecting..." if @debug
     @reconnecter = reconnect (socket) =>
-      console.log 'socket', socket
+      console.log "GEARMAN #{@uid}: connected!" if @debug
       @socket = socket
       @socket.on "error", @errorHandler.bind @
       @socket.on "data", @receive.bind @
       @socket.setKeepAlive true
       @connecting = false
       @connected = true
-      console.log "GEARMAN #{@uid}: connected!" if @debug
       @emit "connect"
       @processCommandQueue()
     @reconnecter.on 'reconnect', ->
