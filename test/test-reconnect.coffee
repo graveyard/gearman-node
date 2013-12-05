@@ -15,7 +15,7 @@ describe 'gearman connection', ->
         server.close()
         setTimeout done, 1000 # make sure a reconnect doesn't happen
       if times > 2
-        assert false, "Reconnected more than expected"
+        throw new Error "Reconnected more than expected"
       stream.destroy() # gtfo client
     server.listen port
     gearman = new Gearman 'localhost', port, true
