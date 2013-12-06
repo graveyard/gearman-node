@@ -36,3 +36,6 @@ publish: clean build
 	    git tag -a v$(VERSION) -m "version $(VERSION)"; \
 	    git push --tags; \
 	fi
+
+clean:
+	rm -rf lib-js lib-js-cov
