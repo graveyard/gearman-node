@@ -1,5 +1,16 @@
+# usage:
+# `make build` or `make` compiles lib/*.coffee to lib-js/*.js (for all changed lib/*.coffee)
+# `make lib/gearman.coffee` compiles just that file to lib-js
+# `make test` runs all the tests
+# `make test/.coffee` runs just that test
 TESTS=$(shell cd test && ls *.coffee | sed s/\.coffee$$//)
 .PHONY: test test-cov $(TESTS)
+LIBS=$(shell find . -regex "^./lib\/.*\.coffee\$$" | sed s/\.coffee$$/\.js/ | sed s/lib/lib-js/)
+
+build: $(LIBS)
+
+lib-js/%.js : lib/%.coffee
+	node_modules/coffee-script/bin/coffee --bare -c -o $(@D) $(patsubst lib-js/%,lib/%,$(patsubst %.js,%.coffee,$@))
 
 test: $(TESTS)
 
@@ -14,3 +25,14 @@ test-cov:
 $(TESTS):
 	./reset_gearmand.sh
 	DEBUG=* NODE_ENV=test node_modules/mocha/bin/mocha --timeout 60000 --compilers coffee:coffee-script test/$@.coffee
+
+publish: clean build
+	$(eval VERSION := $(shell grep version package.json | sed -ne 's/^[ ]*"version":[ ]*"\([0-9\.]*\)",/\1/p';))
+	@echo \'$(VERSION)\'
+	$(eval REPLY := $(shell read -p "Publish and tag as $(VERSION)? " -n 1 -r; echo $$REPLY))
+	@echo \'$(REPLY)\'
+	@if [[ $(REPLY) =~ ^[Yy]$$ ]]; then \
+	    npm publish; \
+	    git tag -a v$(VERSION) -m "version $(VERSION)"; \
+	    git push --tags; \
+	fi
