@@ -1,8 +1,8 @@
 {
   "name": "gearman-coffee",
-  "version": "0.0.6",
+  "version": "1.0.0",
   "description": "gearman bindings dun' right",
-  "author": "Clever <gearman-coffee@getclever.com>",
+  "author": "Clever <dev@getclever.com>",
   "repository": {
     "type": "git",
     "url": "git://github.com/Clever/gearman-coffee.git"
@@ -12,12 +12,12 @@
     "node": ">= 0.6.x"
   },
   "dependencies": {
-    "coffee-script": "~1.6.3",
     "underscore": "~1.3.3",
     "async": "~0.1.22",
     "reconnect": "~1.5.2"
   },
   "devDependencies": {
+    "coffee-script": "~1.6.3",
     "mocha": "~1.2.2"
   },
   "scripts": {

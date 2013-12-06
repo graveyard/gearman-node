@@ -1,15 +1,6 @@
-require('coffee-script');
-
-if (process.env.COV_GEARMAN) {
-  module.exports = {
-    Gearman: require('./lib-js-cov/gearman'),
-    Client: require('./lib-js-cov/client'),
-    Worker: require('./lib-js-cov/worker')
-  };
-} else {
-  module.exports = {
-    Gearman: require('./lib/gearman'),
-    Client: require('./lib/client'),
-    Worker: require('./lib/worker')
-  };
-}
+var path = __dirname + '/' + (process.env.TEST_GEARMAN_COV ? 'lib-js-cov' : 'lib-js');
+module.exports = {
+  Gearman: require(path + '/gearman'),
+  Client: require(path + '/client'),
+  Worker: require(path + '/worker')
+};
