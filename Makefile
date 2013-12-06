@@ -3,6 +3,7 @@
 # `make lib/gearman.coffee` compiles just that file to lib-js
 # `make test` runs all the tests
 # `make test/.coffee` runs just that test
+SHELL:=/bin/bash
 TESTS=$(shell cd test && ls *.coffee | sed s/\.coffee$$//)
 .PHONY: test test-cov $(TESTS)
 LIBS=$(shell find . -regex "^./lib\/.*\.coffee\$$" | sed s/\.coffee$$/\.js/ | sed s/lib/lib-js/)
