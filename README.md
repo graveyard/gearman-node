@@ -2,6 +2,12 @@
 
 **gearman-coffee** is an implementation of the Gearman protocol in CoffeeScript. It exposes a conventional Node library for creating Gearman workers and clients, and listening for events related to both. It aims to be a very a lightweight wrapper around the protocol itself.
 
+## Installation
+
+```
+npm install gearman-coffee
+```
+
 ## Workers
 
 Workers are created with the name and function that they perform:
