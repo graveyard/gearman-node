@@ -91,6 +91,10 @@ Otherwise, throws an exception.
 ### MockWorker
 Base class for mock workers. Emits any methods called on it as events.
 
+#### worker.received
+A map from method name (`warning`, `status`, `data`, `error`, `complete`, `done`) to an array of the
+arguments that that method was called with, one for each time that method was called on the worker.
+
 ### DoneWorker extends MockWorker
 A mock worker that expects only the `done` method to be called.
 The constructor takes a function that is passed the arguments to done.
