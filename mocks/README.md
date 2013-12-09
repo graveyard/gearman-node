@@ -4,8 +4,8 @@ When testing software that depends on Gearman, it's useful to have objects that 
 `gearman-coffee` classes.
 Usually, if you're testing a Gearman worker, you'd like to avoid running a Gearman server and
 instead give it a mock to communicate with.
-If you're testing something that involves a Gearman client, you'll want to mock out the response of
-`client.submitJob` and the the behavior of that job.
+If you're testing something that is a Gearman client, you'll want to mock out the response of
+`client.submitJob` and the the side effects of that job.
 
 ## Usage
 
