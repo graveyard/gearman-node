@@ -94,6 +94,9 @@ client.intercept 'worker_name', new DataJob(['1', '2']), (payload) ->
 If there is an intercept registerd for `worker_name`, returns the first one.
 Otherwise, throws an exception.
 
+### client.done()
+Throws an error if all registered intercepts weren't used.
+
 ## MockWorkers
 
 ### MockWorker

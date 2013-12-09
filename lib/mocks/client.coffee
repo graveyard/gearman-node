@@ -9,3 +9,6 @@ module.exports = class MockClient
     throw new Error "No job registered for #{job_name}" unless task
     task.assertions payload
     task.job.start()
+  done: =>
+    for job_name, task_list of @to_intercept when task_list.length isnt 0
+      throw new Error "Failed to satisfy all tasks for #{job_name}"
