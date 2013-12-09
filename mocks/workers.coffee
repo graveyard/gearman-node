@@ -15,9 +15,9 @@ class MockWorker extends EventEmitter
     super
     @received = {}
     _(METHODS).each (method) =>
+      @received[method] = []
       @[method] = (args...) =>
         @emit.apply @, [method].concat args
-        @received[method] ?= []
         @received[method].push args
     @handle = "some_thing:#{Math.floor (Math.random() * 99999) + 1}"
 # A mock worker that expects to only have the 'done' method called
