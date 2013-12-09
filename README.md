@@ -14,8 +14,8 @@ Workers are created with the name and function that they perform:
 
 ```coffeescript
 worker = new Worker 'reverse', (payload, worker) ->
-  return worker.error "No payload" if not payload?
-  reversed = ((payload.toString "utf-8").split "").reverse().join ""
+  return worker.error 'No payload' unless payload?
+  reversed = payload.toString("utf-8").split('').reverse().join ''
   worker.complete reversed
 ```
 
@@ -40,7 +40,7 @@ default_options =
   max_retries: 0
 worker = new Worker 'unstable', (payload, worker) ->
   return worker.error() if Math.random() < 0.5
-  worker.done 'success'
+  worker.done()
 , default_options
 ```
 
