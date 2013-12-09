@@ -12,8 +12,14 @@ If you're testing something that is a Gearman client, you'll want to mock out th
 ### MockWorkers
 
 ```coffee
-{SuccessWorker} = require('gearman-coffee/mocks').Workers
-some_worker_function a_payload, new SuccessWorker()
+{MockWorker} = require('gearman-coffee/mocks').Workers
+worker = new MockWorker()
+worker.on 'data', console.log
+worker.on 'done', (err) -> console.log "GOT DONE WITH ERR", err
+worker_function = (payload, worker) ->
+  worker.data el for el in payload
+  worker.done()
+worker_function [0..1], worker
 ```
 
 ### MockClient/MockJobs
