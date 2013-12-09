@@ -24,7 +24,7 @@ class MockWorker extends EventEmitter
 class DoneWorker extends MockWorker
   constructor: (done_fn) ->
     super
-    error_on_methods _(METHODS).without 'done'
+    error_on_methods.call @, _(METHODS).without 'done'
     @on 'done', done_fn
 # A mock worker that expects to only have the 'done' method called without an error
 class SuccessWorker extends DoneWorker
@@ -44,7 +44,7 @@ class DataWorker extends MockWorker
   constructor: (done_fn) ->
     super
     data = []
-    error_on_methods _(METHODS).without 'done', 'data'
+    error_on_methods.call @, _(METHODS).without 'done', 'data'
     @on 'data', (datum) -> data.push datum
     @on 'done', (err) =>
       assert.ifError err
