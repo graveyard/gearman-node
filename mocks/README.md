@@ -1,8 +1,9 @@
 # Mocks
 
 When testing software that depends on Gearman, it's useful to have objects that resemble the various
-Gearman classes.
-Usually, if you're testing a Gearman worker, you'll want to pass it a MockWorker of some type.
+`gearman-coffee` classes.
+Usually, if you're testing a Gearman worker, you'd like to avoid running a Gearman server and
+instead give it a mock to communicate with.
 If you're testing something that involves a Gearman client, you'll want to mock out the response of
 `client.submitJob` and the the behavior of that job.
 
