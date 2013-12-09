@@ -30,7 +30,7 @@ MockClient = GearmanMocks.client
 client = new MockClient()
 client_stub = sinon.stub GearmanCoffee, 'Client'
 client_stub.returns client
-client.registerTask 'worker_name', new DataJob(['1', '2']), (payload) ->
+client.intercept 'worker_name', new DataJob(['1', '2']), (payload) ->
   assert.deepEqual payload, expected_payload
 ```
 
@@ -40,7 +40,7 @@ When that happens, it's going to get back a job that emits two data events for '
 emitting a complete event.
 
 ## MockJobs
-Mock jobs that you can pass to the `registerTask` method of a `MockClient`.
+Mock jobs that you can pass to the `intercept` method of a `MockClient`.
 
 ### MockJob
 Base class for mock jobs.
@@ -71,19 +71,19 @@ j = new DataJob ['1', '2'], 1000
 
 ## MockClient
 
-### client.registerTask(worker_name, job, [assertions])
-* `worker_name`: name of the worker to register this task for.
-* `job`: MockJob to return for that task.
+### client.intercept(worker_name, job, [assertions])
+* `worker_name`: name of the worker to register this intercept for.
+* `job`: MockJob to return for that intercept.
 * `assertions`: optional function that is passed the payload when the job is submitted by the client
 so that you can inspect it and make any assertions you would like about it
 ```coffee
-client.registerTask 'worker_name', new DataJob(['3', '4'])
-client.registerTask 'worker_name', new DataJob(['1', '2']), (payload) ->
+client.intercept 'worker_name', new DataJob(['3', '4'])
+client.intercept 'worker_name', new DataJob(['1', '2']), (payload) ->
   assert.deepEqual payload, expected_payload
 ```
 
 ### client.submitJob(worker_name, payload)
-If there is a task registerd for `worker_name`, returns the first one.
+If there is an intercept registerd for `worker_name`, returns the first one.
 Otherwise, throws an exception.
 
 ## MockWorkers
