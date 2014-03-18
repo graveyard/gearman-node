@@ -19,9 +19,8 @@ class MockJob extends EventEmitter
       else
         events = _.sortBy @events, (e) -> e.timeout
         event_pairs = _.zip events, _.rest(events).concat [_.last events]
-        _.reduce event_pairs, (acc, [event, next_event]) ->
-          acc.concat _.extend event, timeout: next_event.timeout - event.timeout
-        , []
+        _.map event_pairs, ([event, next_event]) ->
+          _.extend event, timeout: next_event.timeout - event.timeout
     async.forEachSeries events, ({event, timeout, args}, cb_fe) =>
       setTimeout =>
         @emit event, @handle, args...
