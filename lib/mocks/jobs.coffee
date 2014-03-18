@@ -13,14 +13,15 @@ class MockJob extends EventEmitter
     interval = Math.floor timeout / (data.length + 1)
     @delayEmit event, (i + 1) * interval, el for el, i in data
   start: =>
-    events = if @events.length < 2
-      @events
-    else
-      events = _.sortBy @events, (e) -> e.timeout
-      event_pairs = _.zip events, _.rest(events).concat [_.last events]
-      _.reduce event_pairs, (acc, [event, next_event]) ->
-        acc.concat _.extend event, timeout: next_event.timeout - event.timeout
-      , []
+    events =
+      if @events.length < 2
+        @events
+      else
+        events = _.sortBy @events, (e) -> e.timeout
+        event_pairs = _.zip events, _.rest(events).concat [_.last events]
+        _.reduce event_pairs, (acc, [event, next_event]) ->
+          acc.concat _.extend event, timeout: next_event.timeout - event.timeout
+        , []
     async.forEachSeries events, ({event, timeout, args}, cb_fe) =>
       setTimeout =>
         @emit event, @handle, args...
