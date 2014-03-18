@@ -32,8 +32,8 @@ GearmanCoffee = require 'gearman-coffee'
 GearmanMocks  = require 'gearman-coffee/mocks'
 sinon         = require 'sinon'
 
-{DataJob} = GearmanMocks.jobs
-MockClient = GearmanMocks.client
+{DataJob} = GearmanMocks.Jobs
+MockClient = GearmanMocks.Client
 
 client = new MockClient()
 client_stub = sinon.stub GearmanCoffee, 'Client'
@@ -63,18 +63,33 @@ job.delayEmit 'data', 2000, '1'
 Starts any timers registered via `job.delayEmit`
 
 ### CompleteJob extends MockJob
-Mock job that emits a complete event after `timeout` time (default 500 ms).
+Mock job that emits a `'complete'` event after `timeout` time (default 0 ms).
 ```coffee
 j = new CompleteJob()
 j = new CompleteJob 1000
 ```
 
 ### DataJob extends CompleteJob
-Mock job that emits `data` in evenly-spaced intervals over `timeout` time (default 500 ms), and then
+Mock job that emits `'data'` events in evenly-spaced intervals over `timeout` time (default 0 ms), and then
 completes.
 ```coffee
 j = new DataJob ['1', '2']
 j = new DataJob ['1', '2'], 1000
+```
+
+### FailJob extends MockJob
+Mock job that emits a `'fail'` event after `timeout` time (default 0 ms).
+```coffee
+j = new FailJob()
+j = new FailJob 1000
+```
+
+### ErrorJob extends FailJob
+Mock job that emits `'warning'` events in evenly-spaced intervals over `timeout` time (default 0 ms), and then
+fails.
+```coffee
+j = new ErrorJob ['everything broke', 'oh no']
+j = new ErrorJob ['everything broke', 'oh no'], 1000
 ```
 
 ## MockClient
