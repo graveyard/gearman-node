@@ -10,7 +10,7 @@ class MockJob extends EventEmitter
   delayEmit: (event, timeout, args...) =>
     @events.push {event, timeout, args}
   intervalEmit: (event, timeout, data) ->
-    interval = timeout / (data.length + 1)
+    interval = Math.floor timeout / (data.length + 1)
     @delayEmit event, (i + 1) * interval, el for el, i in data
   start: =>
     events = if @events.length < 2
