@@ -1,3 +1,5 @@
+_ = require 'underscore'
+async = require 'async'
 {EventEmitter}  = require 'events'
 
 class MockJob extends EventEmitter
@@ -7,39 +9,46 @@ class MockJob extends EventEmitter
     @events = []
   delayEmit: (event, timeout, args...) =>
     @events.push {event, timeout, args}
-  start: =>
-    for {event, timeout, args} in @events
-      setTimeout @emit.bind(@), timeout, event, @handle, args...
-    @
-
-class FinishJob extends MockJob
-  constructor: (event, timeout = 500) ->
-    super
-    @delayEmit event, timeout
-
-class IntervalJob extends FinishJob
-  constructor: (finish_event, event, data, timeout = 500) ->
-    # Short timeouts can cause the finish event to fire before all the data
-    # events fire
-    timeout = if timeout <= data.length then (data.length + 1) * 2 else timeout
-    super finish_event, timeout
+  intervalEmit: (event, timeout, data) ->
     interval = timeout / (data.length + 1)
     @delayEmit event, (i + 1) * interval, el for el, i in data
+  start: =>
+    events = if @events.length < 2
+      @events
+    else
+      events = _.sortBy @events, (e) -> e.timeout
+      event_pairs = _.zip events, _.rest(events).concat [_.last events]
+      _.reduce event_pairs, (acc, [event, next_event]) ->
+        acc.concat _.extend event, timeout: next_event.timeout - event.timeout
+      , []
+    async.forEachSeries events, ({event, timeout, args}, cb_fe) =>
+      setTimeout =>
+        @emit event, @handle, args...
+        cb_fe()
+      , timeout
+    , -> # No errors to handle
+    @
 
-class CompleteJob extends FinishJob
+class CompleteJob extends MockJob
   constructor: (timeout = 500) ->
-    super 'complete', timeout
+    super
+    @delayEmit 'complete', timeout
 
-class DataJob extends IntervalJob
+class DataJob extends CompleteJob
   constructor: (data, timeout = 500) ->
-    super 'complete', 'data', data, timeout
+    # In case timeout is 0, add 1 so 'complete' event fires last
+    super timeout + 1
+    @intervalEmit 'data', timeout, data
 
-class FailJob extends FinishJob
+class FailJob extends MockJob
   constructor: (timeout = 500) ->
-    super 'fail', timeout
+    super
+    @delayEmit 'fail', timeout
 
-class ErrorJob extends IntervalJob
+class ErrorJob extends FailJob
   constructor: (messages, timeout = 500) ->
-    super 'fail', 'warning', messages, timeout
+    # In case timeout is 0, add 1 so 'fail' event fires last
+    super timeout + 1
+    @intervalEmit 'warning', timeout, messages
 
 module.exports = {MockJob, CompleteJob, DataJob, FailJob, ErrorJob}
