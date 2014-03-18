@@ -30,24 +30,24 @@ class MockJob extends EventEmitter
     @
 
 class CompleteJob extends MockJob
-  constructor: (timeout = 500) ->
+  constructor: (timeout = 0) ->
     super
     @delayEmit 'complete', timeout
 
 class DataJob extends CompleteJob
-  constructor: (data, timeout = 500) ->
-    # In case timeout is 0, add 1 so 'complete' event fires last
+  constructor: (data, timeout = 0) ->
+    # Add 1 so 'complete' event fires last
     super timeout + 1
     @intervalEmit 'data', timeout, data
 
 class FailJob extends MockJob
-  constructor: (timeout = 500) ->
+  constructor: (timeout = 0) ->
     super
     @delayEmit 'fail', timeout
 
 class ErrorJob extends FailJob
-  constructor: (messages, timeout = 500) ->
-    # In case timeout is 0, add 1 so 'fail' event fires last
+  constructor: (messages, timeout = 0) ->
+    # Add 1 so 'fail' event fires last
     super timeout + 1
     @intervalEmit 'warning', timeout, messages
 
