@@ -25,7 +25,7 @@ test-cov:
 
 $(TESTS):
 	./reset_gearmand.sh
-	DEBUG=* NODE_ENV=test node_modules/mocha/bin/mocha --timeout 60000 --compilers coffee:coffee-script test/$@.coffee
+	DEBUG=* NODE_ENV=test node_modules/mocha/bin/mocha -r coffee-errors --timeout 60000 --compilers coffee:coffee-script test/$@.coffee
 
 publish: clean build
 	$(eval VERSION := $(shell grep version package.json | sed -ne 's/^[ ]*"version":[ ]*"\([0-9\.]*\)",/\1/p';))

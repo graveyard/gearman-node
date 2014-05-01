@@ -178,6 +178,33 @@ describe 'worker and client', ->
       assert.equal warning, null, "should not have gotten a  warning"
       done()
 
+  it 'allows the worker to stop work when sent a deregister', (done) ->
+    @timeout 10000
+    client = new Client options
+    job1 = client.submitJob 'test_deregister'
+    job2 = client.submitJob 'test_deregister'
+    job1.on 'warning', (handle, warning) -> assert false, 'should not warn'
+    job2.on 'warning', (handle, warning) -> assert false, 'should not warn'
+
+    # run worker and deregister, ensure other worker can pick
+    # up job afterwards
+    async.series [
+      (cb) ->
+        complete = ->
+          job1.on 'complete', (handle, data) -> cb()
+        new Worker 'test_deregister', (payload, worker) ->
+          worker.parent.deregister -> complete()
+          setTimeout (-> worker.done()), 1000
+        , options
+      (cb) ->
+        new Worker 'test_deregister', (payload, worker) ->
+          setTimeout ( -> worker.done()), 500
+        , options
+        job2.on 'complete', (handle, data) -> cb()
+    ], (err) ->
+      console.log "err is: #{err}" if err?
+      done()
+
 # describe 'worker timeout', ->
 #   it 'timeout happens before job complete', (done)->
 #     @timeout 10000
