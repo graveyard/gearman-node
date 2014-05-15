@@ -13,9 +13,9 @@ build: $(LIBS)
 lib-js/%.js : lib/%.coffee
 	node_modules/coffee-script/bin/coffee --bare -c -o $(@D) $(patsubst lib-js/%,lib/%,$(patsubst %.js,%.coffee,$@))
 
-test: $(TESTS)
+test:	build	$(TESTS)
 
-test-cov:
+test-cov: build
 	@if [[ -z "$(DRONE)" ]]; then \
 		./reset_gearmand.sh; \
 	fi
