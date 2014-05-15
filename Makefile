@@ -16,7 +16,9 @@ lib-js/%.js : lib/%.coffee
 test: $(TESTS)
 
 test-cov:
-	./reset_gearmand.sh
+	@if [[ -z "$(DRONE)" ]]; then \
+		./reset_gearmand.sh; \
+	fi
 	rm -rf lib-js lib-js-cov
 	coffee -c -o lib-js lib
 	jscoverage lib-js lib-js-cov
@@ -24,7 +26,9 @@ test-cov:
 	open coverage.html
 
 $(TESTS):
-	./reset_gearmand.sh
+	@if [[ -z "$(DRONE)" ]]; then \
+		./reset_gearmand.sh; \
+	fi
 	DEBUG=* NODE_ENV=test node_modules/mocha/bin/mocha -r coffee-errors --timeout 60000 --compilers coffee:coffee-script test/$@.coffee
 
 publish: clean build
