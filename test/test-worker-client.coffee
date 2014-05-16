@@ -178,33 +178,6 @@ describe 'worker and client', ->
       assert.equal warning, null, "should not have gotten a  warning"
       done()
 
-  it 'allows the worker to stop work when sent a shutdown', (done) ->
-    @timeout 10000
-    client = new Client options
-    job1 = client.submitJob 'test_shutdown'
-    job2 = client.submitJob 'test_shutdown'
-    job1.on 'warning', (handle, warning) -> assert false, 'should not warn'
-    job2.on 'warning', (handle, warning) -> assert false, 'should not warn'
-
-    # run worker and shutdown, ensure other worker can pick
-    # up job afterwards
-    async.series [
-      (cb) ->
-        job1.on 'complete', (handle, data) -> cb()
-        new Worker 'test_shutdown', (payload, worker) ->
-          worker.parent.shutdown -> (-> console.log 'shutdown worker 1')
-          setTimeout (-> worker.done()), 1000
-        , options
-      (cb) ->
-        console.log 'starting second worker'
-        new Worker 'test_shutdown', (payload, worker) ->
-          setTimeout ( -> worker.done()), 500
-        , options
-        job2.on 'complete', (handle, data) -> cb()
-    ], (err) ->
-      assert.equal err, null, "should not have given error: #{err}"
-      done()
-
   it 'completes the task it was working on when sent a shutdown', (done) ->
     @timeout 10000
     client = new Client options
@@ -214,16 +187,43 @@ describe 'worker and client', ->
     job2.on 'warning', (handle, warning) -> assert false, 'should not warn'
     async.series [
       (cb) ->
+        job1.on 'complete', (handle, data) -> cb()
         new Worker 'test_shutdown_completion', (payload, worker) ->
           worker.parent.shutdown -> ( -> console.log 'shutting down')
           assert.equal payload, 1, 'first worker should only have the chance to work on first job'
-          setTimeout (-> cb()), 2000 # more than the timeout for re-checking done-ness
+          setTimeout (-> worker.done()), 2000 # more than the timeout for re-checking done-ness
         , options
       (cb) ->
         console.log 'starting second worker'
         new Worker 'test_shutdown_completion', (payload, worker) ->
           assert.equal payload, 2, 'second job should have second payload'
           cb()
+        , options
+    ], (err) ->
+      assert.equal err, null, "should not have given error: #{err}"
+      done()
+
+  it 'completes err when sent a shutdown', (done) ->
+    @timeout 10000
+    client = new Client options
+    job1 = client.submitJob 'test_err_shutdown_completion', 1
+    job2 = client.submitJob 'test_err_shutdown_completion', 2
+    job1.on 'complete', (handle, warning) -> assert false, 'should not complete'
+    job2.on 'warning', (handle, warning) -> assert false, 'should not warn'
+    async.series [
+      (cb) ->
+        job1.on 'warning', (handle, data) -> cb()
+        new Worker 'test_err_shutdown_completion', (payload, worker) ->
+          worker.parent.shutdown -> ( -> console.log 'shutting down')
+          assert.equal payload, 1, 'first worker should only have the chance to work on first job'
+          setTimeout (-> worker.done("Worker Error")), 2000 # more than the timeout for re-checking done-ness
+        , options
+      (cb) ->
+        console.log 'starting second worker'
+        job2.on 'complete', (handle, data) -> cb()
+        new Worker 'test_err_shutdown_completion', (payload, worker) ->
+          assert.equal payload, 2, 'second job should have second payload'
+          worker.done()
         , options
     ], (err) ->
       assert.equal err, null, "should not have given error: #{err}"
