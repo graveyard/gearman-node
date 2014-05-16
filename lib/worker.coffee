@@ -131,10 +131,10 @@ class Worker extends Gearman
       @sendCommand 'CAN_DO_TIMEOUT', @name, @options.timeout
     else
       @sendCommand 'CAN_DO', @name
-    @get_next_job()
+    @_get_next_job()
     @on 'NO_JOB', => @sendCommand 'PRE_SLEEP' # will be woken up by noop
-    @on 'NOOP', => @get_next_job()            # woken up!
-    @on 'JOB_ASSIGN', @receiveJob.bind @
+    @on 'NOOP', => @_get_next_job()           # woken up!
+    @on 'JOB_ASSIGN', @_receive_job.bind @
     @connect()
 
   shutdown: (done) =>
@@ -147,10 +147,10 @@ class Worker extends Gearman
       done
     )
 
-  get_next_job: =>
+  _get_next_job: =>
     @sendCommand 'GRAB_JOB' if @active
 
-  receiveJob: (handle, name, payload) =>
+  _receive_job: (handle, name, payload) =>
     @fn payload, new WorkerHelper(@,handle)
 
   # helper fns exposed to worker function
@@ -164,11 +164,11 @@ class Worker extends Gearman
       @warning warning if warning?
       @parent.sendCommand 'WORK_FAIL', @handle
       @parent.work_in_progress = false
-      @parent.get_next_job()
+      @parent._get_next_job()
     complete: (data) =>
       @parent.sendCommand 'WORK_COMPLETE', @handle, data
       @parent.work_in_progress = false
-      @parent.get_next_job()
+      @parent._get_next_job()
     done: (err) =>
       if err?
         @error(err)
