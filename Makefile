@@ -13,10 +13,12 @@ build: $(LIBS)
 lib-js/%.js : lib/%.coffee
 	node_modules/coffee-script/bin/coffee --bare -c -o $(@D) $(patsubst lib-js/%,lib/%,$(patsubst %.js,%.coffee,$@))
 
-test: $(TESTS)
+test:	build	$(TESTS)
 
-test-cov:
-	./reset_gearmand.sh
+test-cov: build
+	@if [[ -z "$(DRONE)" ]]; then \
+		./reset_gearmand.sh; \
+	fi
 	rm -rf lib-js lib-js-cov
 	coffee -c -o lib-js lib
 	jscoverage lib-js lib-js-cov
@@ -24,8 +26,10 @@ test-cov:
 	open coverage.html
 
 $(TESTS):
-	./reset_gearmand.sh
-	DEBUG=* NODE_ENV=test node_modules/mocha/bin/mocha --timeout 60000 --compilers coffee:coffee-script test/$@.coffee
+	@if [[ -z "$(DRONE)" ]]; then \
+		./reset_gearmand.sh; \
+	fi
+	DEBUG=* NODE_ENV=test node_modules/mocha/bin/mocha -r coffee-errors --timeout 60000 --compilers coffee:coffee-script test/$@.coffee
 
 publish: clean build
 	$(eval VERSION := $(shell grep version package.json | sed -ne 's/^[ ]*"version":[ ]*"\([0-9\.]*\)",/\1/p';))

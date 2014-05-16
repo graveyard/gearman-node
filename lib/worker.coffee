@@ -115,10 +115,13 @@ JOB_ASSIGN_UNIQ
 
 Gearman = require './gearman'
 _ = require 'underscore'
+async = require 'async'
 EventEmitter = require("events").EventEmitter
 
 class Worker extends Gearman
   constructor: (@name, @fn, @options) ->
+    @work_in_progress = false
+    @active = true
     @options = _.defaults (@options or {}),
       host: 'localhost'
       port: 4730
@@ -128,32 +131,48 @@ class Worker extends Gearman
       @sendCommand 'CAN_DO_TIMEOUT', @name, @options.timeout
     else
       @sendCommand 'CAN_DO', @name
-    @sendCommand 'GRAB_JOB'
-    @on 'NO_JOB', () => @sendCommand 'PRE_SLEEP' # will be woken up by noop
-    @on 'NOOP', () => @sendCommand 'GRAB_JOB'    # woken up!
+    @get_next_job()
+    @on 'NO_JOB', => @sendCommand 'PRE_SLEEP' # will be woken up by noop
+    @on 'NOOP', => @get_next_job()            # woken up!
     @on 'JOB_ASSIGN', @receiveJob.bind @
     @connect()
+
+  shutdown: (done) =>
+    @active = false
+    # poll until the running job is complete and
+    # all data is written to the socket
+    async.whilst(
+      => @socket.bufferSize > 0 and @work_in_progress
+      (cb) -> setTimeout cb, 1000
+      done
+    )
+
+  get_next_job: =>
+    @sendCommand 'GRAB_JOB' if @active
+
+  receiveJob: (handle, name, payload) =>
+    @fn payload, new WorkerHelper(@,handle)
 
   # helper fns exposed to worker function
   class WorkerHelper extends EventEmitter
     constructor: (@parent, @handle) ->
+      @parent.work_in_progress = true
     warning: (warning) => @parent.sendCommand 'WORK_WARNING', @handle, warning
     status: (num, den) => @parent.sendCommand 'WORK_STATUS', @handle, num, den
     data: (data)       => @parent.sendCommand 'WORK_DATA', @handle, data
     error: (warning) =>
       @warning warning if warning?
       @parent.sendCommand 'WORK_FAIL', @handle
-      @parent.sendCommand 'GRAB_JOB'
+      @parent.work_in_progress = false
+      @parent.get_next_job()
     complete: (data) =>
       @parent.sendCommand 'WORK_COMPLETE', @handle, data
-      @parent.sendCommand 'GRAB_JOB'
+      @parent.work_in_progress = false
+      @parent.get_next_job()
     done: (err) =>
       if err?
         @error(err)
       else
         @complete()
-
-  receiveJob: (handle, name, payload) =>
-    @fn payload, new WorkerHelper(@,handle)
 
 module.exports = Worker

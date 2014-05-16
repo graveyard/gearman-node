@@ -1,0 +1,10 @@
+image: node0.10
+script:
+  - npm install
+  - make test
+services:
+  - rgarcia/gearmand
+notify:
+  email:
+    recipients:
+      - drone@clever.com
