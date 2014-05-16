@@ -3,7 +3,7 @@ assert          = require 'assert'
 {EventEmitter}  = require 'events'
 util            = require 'util'
 
-METHODS = ['warning', 'status', 'data', 'error', 'complete', 'done']
+METHODS = ['warning', 'status', 'data', 'error', 'complete', 'done', 'shutdown']
 error_on_methods = (methods) -> _(methods).each error_on_method.bind @
 error_on_method = (method) ->
   @on method, (args...) =>
