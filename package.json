@@ -14,7 +14,7 @@
   "dependencies": {
     "underscore": "~1.5.2",
     "async": "~0.1.22",
-    "reconnect": "~1.5.2"
+    "reconnect-core": "~0.0.1"
   },
   "devDependencies": {
     "coffee-errors": "~0.8.6",
