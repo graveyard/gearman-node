@@ -17,7 +17,7 @@
 EventEmitter = require("events").EventEmitter
 _ = require 'underscore'
 assert = require 'assert'
-reconnect = require 'reconnect'
+reconnect = require 'reconnect-net'
 nextTick = require('timers').setImmediate or process.nextTick
 
 uid = 0
