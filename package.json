@@ -1,6 +1,6 @@
 {
   "name": "gearman-coffee",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "gearman bindings dun' right",
   "author": "Clever <dev@clever.com>",
   "repository": {
@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "async": "~0.1.22",
-    "reconnect-net": "0.0.0",
-    "underscore": "~1.5.2"
+    "underscore": "~1.5.2",
+    "reconnect-net": "0.0.0"
   },
   "devDependencies": {
     "coffee-errors": "~0.8.6",
