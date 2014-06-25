@@ -1,11 +1,11 @@
 {
   "name": "gearman-coffee",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "gearman bindings dun' right",
   "author": "Clever <dev@clever.com>",
   "repository": {
     "type": "git",
-    "url": "git://github.com/Clever/gearman-coffee.git"
+    "url": "git://github.com/meetings/gearman-coffee.git"
   },
   "main": "./index",
   "engines": {
