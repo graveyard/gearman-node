@@ -122,19 +122,16 @@ class Worker extends Gearman
   constructor: (@name, @fn, @options) ->
     @work_in_progress = false
     @active = true
+    @first_connect = true
     @options = _.defaults (@options or {}),
       host: 'localhost'
       port: 4730
       debug: false
     super @options.host, @options.port, @options.debug
-    if @options.timeout?
-      @sendCommand 'CAN_DO_TIMEOUT', @name, @options.timeout
-    else
-      @sendCommand 'CAN_DO', @name
-    @_get_next_job()
     @on 'NO_JOB', => @sendCommand 'PRE_SLEEP' # will be woken up by noop
     @on 'NOOP', => @_get_next_job()           # woken up!
     @on 'JOB_ASSIGN', @_receive_job.bind @
+    @on 'connect', => @_register_worker()
     @connect()
 
   shutdown: (done) =>
@@ -146,6 +143,16 @@ class Worker extends Gearman
       (cb) -> setTimeout cb, 1000
       done
     )
+
+  _register_worker: =>
+    if not @first_connect
+      @sendCommand 'RESET_ABILITIES'
+    if @options.timeout?
+      @sendCommand 'CAN_DO_TIMEOUT', @name, @options.timeout
+    else
+      @sendCommand 'CAN_DO', @name
+    @first_connect = false
+    @_get_next_job()
 
   _get_next_job: =>
     @sendCommand 'GRAB_JOB' if @active
