@@ -2,7 +2,6 @@ assert  = require 'assert'
 Gearman = require('../index').Gearman
 Worker = require('../index').Worker
 net = require 'net'
-stream = require 'stream'
 
 describe 'gearman connection', ->
   it 'auto-reconnects', (done) ->
