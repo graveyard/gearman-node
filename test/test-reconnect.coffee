@@ -46,9 +46,7 @@ describe 'a reconnecting worker', ->
       console.log payload.toString()
     ,{port: port, debug: true}
     gearman.connect()
-
+    
     bufferStartsWith = (buf1, buf2) ->
-      for i in [0..buf2.length-1]
-        if buf1[i] != buf2[i]
-          return false
-      return true
+      return false for i in [0..buf2.length - 1] when buf1[i] isnt buf2[i]
+      true
