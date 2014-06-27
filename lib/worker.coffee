@@ -122,7 +122,6 @@ class Worker extends Gearman
   constructor: (@name, @fn, @options) ->
     @work_in_progress = false
     @active = true
-    @first_connect = true
     @options = _.defaults (@options or {}),
       host: 'localhost'
       port: 4730
@@ -145,13 +144,11 @@ class Worker extends Gearman
     )
 
   _register_worker: =>
-    if not @first_connect
-      @sendCommand 'RESET_ABILITIES'
+    @sendCommand 'RESET_ABILITIES'
     if @options.timeout?
       @sendCommand 'CAN_DO_TIMEOUT', @name, @options.timeout
     else
       @sendCommand 'CAN_DO', @name
-    @first_connect = false
     @_get_next_job()
 
   _get_next_job: =>
