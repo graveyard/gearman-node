@@ -13,9 +13,9 @@ npm install gearman-coffee
 Workers are created with the name and function that they perform:
 
 ```javascript
-var worker;
+var gearman = require('gearman-coffee');
 
-worker = new Worker('reverse', function(payload, worker) {
+var worker = new gearman.Worker('reverse', function(payload, worker) {
   var reversed;
   if (payload == null) {
     return worker.error('No payload');
@@ -34,11 +34,12 @@ The worker function itself is passed an object that contains the following conve
  * `complete([data])`: sends an optional 'WORK_DATA' before 'WORK_COMPLETE'
  * `done([warning])`: calls `error` if warning passed, otherwise `complete`
 
-The exact meaning of these is best documented on the Gearman website itself: [http://gearman.org/index.php?id=protocol](http://gearman.org/index.php?id=protocol).
+The exact meaning of these is best documented on the Gearman website itself: [http://gearman.org/protocol/](http://gearman.org/protocol/).
 
 Workers optionally take a hash of options. These options control the Gearman server connection settings as well as debug output and retry behavior:
 
 ```javascript
+var gearman = require('gearman-coffee');
 var default_options, worker;
 
 default_options = {
@@ -48,7 +49,7 @@ default_options = {
   max_retries: 0
 };
 
-worker = new Worker('unstable', function(payload, worker) {
+worker = new gearman.Worker('unstable', function(payload, worker) {
   if (Math.random() < 0.5) {
     return worker.error();
   }
@@ -61,6 +62,7 @@ worker = new Worker('unstable', function(payload, worker) {
 Clients are used to submit work to Gearman. By default they connect to Gearman at `localhost:4730`:
 
 ```javascript
+var gearman = require('gearman-coffee');
 var client, default_options;
 
 default_options = {
@@ -69,7 +71,7 @@ default_options = {
   debug: false
 };
 
-client = new Client(default_options);
+client = new gearman.Client(default_options);
 ```
 
 The `submitJob` method of the client takes in the name of the worker and the workload you'd like to send. It returns an EventEmitter that relays Gearman server notifications:
