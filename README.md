@@ -1,11 +1,11 @@
-# gearman-coffee
+# gearman-node
 
-**gearman-coffee** is an implementation of the Gearman protocol in CoffeeScript. It exposes a conventional Node library for creating Gearman workers and clients, and listening for events related to both. It aims to be a very a lightweight wrapper around the protocol itself.
+**gearman-node** is an implementation of the Gearman protocol in CoffeeScript. It exposes a conventional Node library for creating Gearman workers and clients, and listening for events related to both. It aims to be a very a lightweight wrapper around the protocol itself.
 
 ## Installation
 
 ```
-npm install gearman-coffee
+npm install gearman-node
 ```
 
 ## Workers
@@ -13,7 +13,7 @@ npm install gearman-coffee
 Workers are created with the name and function that they perform:
 
 ```javascript
-var gearman = require('gearman-coffee');
+var gearman = require('gearman-node');
 
 var worker = new gearman.Worker('reverse', function(payload, worker) {
   var reversed;
@@ -39,7 +39,7 @@ The exact meaning of these is best documented on the Gearman website itself: [ht
 Workers optionally take a hash of options. These options control the Gearman server connection settings as well as debug output and retry behavior:
 
 ```javascript
-var gearman = require('gearman-coffee');
+var gearman = require('gearman-node');
 var default_options, worker;
 
 default_options = {
@@ -62,7 +62,7 @@ worker = new gearman.Worker('unstable', function(payload, worker) {
 Clients are used to submit work to Gearman. By default they connect to Gearman at `localhost:4730`:
 
 ```javascript
-var gearman = require('gearman-coffee');
+var gearman = require('gearman-node');
 var client, default_options;
 
 default_options = {
