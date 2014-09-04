@@ -1,4 +1,6 @@
-module.exports = class MockClient
+events = require 'events'
+
+module.exports = class MockClient extends events.EventEmitter
   constructor: ->
     @to_intercept = {}
   intercept: (job_name, job, assertions=(->)) ->
