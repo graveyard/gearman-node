@@ -191,7 +191,7 @@ describe 'worker and client', ->
         new Worker 'test_shutdown_completion', (payload, worker) ->
           worker.parent.shutdown( ->
             console.warn "shutting down"
-            cb "called shutdown method before done called" if worker.parent.work_in_progress
+            cb new Error("called shutdown method before done called") if worker.parent.work_in_progress
           )
           assert.equal payload, 1, 'first worker should only have the chance to work on first job'
           setTimeout (-> worker.done()), 2000 # more than the timeout for re-checking done-ness
@@ -219,7 +219,7 @@ describe 'worker and client', ->
         new Worker 'test_err_shutdown_completion', (payload, worker) ->
           worker.parent.shutdown( ->
             console.warn 'err shutting down'
-            cb "called shutdown method before done called" if worker.parent.work_in_progress
+            cb new Error("called shutdown method before done called") if worker.parent.work_in_progress
           )
           assert.equal payload, 1, 'first worker should only have the chance to work on first job'
           setTimeout (-> worker.done("Worker Error")), 2000 # more than the timeout for re-checking done-ness
