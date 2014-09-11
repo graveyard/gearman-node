@@ -189,12 +189,15 @@ describe 'worker and client', ->
       (cb) ->
         job1.on 'complete', (handle, data) -> cb()
         new Worker 'test_shutdown_completion', (payload, worker) ->
-          worker.parent.shutdown -> ( -> console.log 'shutting down')
+          worker.parent.shutdown( ->
+            console.warn "shutting down"
+            cb "called shutdown method before done called" if worker.parent.work_in_progress
+          )
           assert.equal payload, 1, 'first worker should only have the chance to work on first job'
           setTimeout (-> worker.done()), 2000 # more than the timeout for re-checking done-ness
         , options
       (cb) ->
-        console.log 'starting second worker'
+        console.warn 'starting second worker'
         new Worker 'test_shutdown_completion', (payload, worker) ->
           assert.equal payload, 2, 'second job should have second payload'
           cb()
@@ -214,12 +217,15 @@ describe 'worker and client', ->
       (cb) ->
         job1.on 'warning', (handle, data) -> cb()
         new Worker 'test_err_shutdown_completion', (payload, worker) ->
-          worker.parent.shutdown -> ( -> console.log 'shutting down')
+          worker.parent.shutdown( ->
+            console.warn 'err shutting down'
+            cb "called shutdown method before done called" if worker.parent.work_in_progress
+          )
           assert.equal payload, 1, 'first worker should only have the chance to work on first job'
           setTimeout (-> worker.done("Worker Error")), 2000 # more than the timeout for re-checking done-ness
         , options
       (cb) ->
-        console.log 'starting second worker'
+        console.warn 'starting second worker'
         job2.on 'complete', (handle, data) -> cb()
         new Worker 'test_err_shutdown_completion', (payload, worker) ->
           assert.equal payload, 2, 'second job should have second payload'
