@@ -189,6 +189,7 @@ describe 'worker and client', ->
       (cb) ->
         job1.on 'complete', (handle, data) -> cb()
         new Worker 'test_shutdown_completion', (payload, worker) ->
+          # shutdown should only be called after done() once
           worker.parent.shutdown( ->
             console.warn "shutting down"
             cb new Error("called shutdown method before done called") if worker.parent.work_in_progress
