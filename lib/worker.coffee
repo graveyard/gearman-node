@@ -138,7 +138,7 @@ class Worker extends Gearman
     # poll until the running job is complete and
     # all data is written to the socket
     async.whilst(
-      => @socket.bufferSize > 0 or @work_in_progress
+      => @socket?.bufferSize > 0 or @work_in_progress
       (cb) -> setTimeout cb, 1000
       done
     )
