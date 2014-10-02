@@ -23,5 +23,8 @@
   },
   "scripts": {
     "test": "make -B test"
-  }
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  } 
 }
