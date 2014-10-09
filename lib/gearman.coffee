@@ -173,6 +173,9 @@ class Gearman extends EventEmitter
 
   receive: (chunk) ->
     # allocate buffer for this chunk plus its predecessor (in the case of continuation)
+    if ((chunk?.length or 0) + (@remainder?.length or 0)) > 0x3fffffff
+      console.log "GEARMAN #{@uid}: error=kMaxLength chunk: #{chunk?.length} remainder: #{@remainder?.length}"
+
     data = new Buffer( (chunk?.length or 0) + (@remainder?.length or 0) )
     return if not data.length
 
