@@ -25,7 +25,7 @@ test-cov: build
 	COV_GEARMAN=1 node_modules/mocha/bin/mocha -R html-cov --compilers coffee:coffee-script test/{test,test-raceconditions}.coffee | tee coverage.html
 	open coverage.html
 
-$(TESTS):
+$(TESTS): build
 	@if [[ -z "$(DRONE)" ]]; then \
 		./reset_gearmand.sh; \
 	fi
