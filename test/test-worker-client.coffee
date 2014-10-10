@@ -268,10 +268,22 @@ describe 'worker and client', ->
       process.nextTick -> assert.equal count, 3
       count = count + 1
       assert.equal output_data, data
-    job.on 'complete', (handle, _) ->
+    job.on 'complete', ->
       worker.disconnect()
       client.disconnect()
       done()
+
+  it 'client should handle partial packet writes', (done) ->
+    @timeout 10000
+    gearman = new Gearman
+    gearman.on "WORK_DATA", (data) ->
+      assert.equal data, "test"
+      done()
+    # Manually send a packet in parts and make sure that gearman tracks the remainder
+    gearman.receive new Buffer("\0RES")
+    gearman.receive new Buffer([0, 0, 0, 28]) # Work data type
+    gearman.receive new Buffer([0, 0, 0, 4])
+    gearman.receive new Buffer("test")
 
 # describe 'worker timeout', ->
 #   it 'timeout happens before job complete', (done)->
