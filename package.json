@@ -19,7 +19,7 @@
   "devDependencies": {
     "coffee-errors": "~0.8.6",
     "coffee-script": "~1.6.3",
-    "mocha": "~1.2.2"
+    "mocha": "~1.6.0"
   },
   "scripts": {
     "test": "make -B test"
