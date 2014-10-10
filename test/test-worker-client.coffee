@@ -249,6 +249,30 @@ describe 'worker and client', ->
       assert.equal err, null, "should not have given error: #{err}"
       done()
 
+  it 'should process multiple packets in one tick', (done) ->
+    @timeout 10000
+    output_data = "output_data"
+    worker = new Worker 'test', (payload, worker) ->
+      worker.data output_data
+      worker.data output_data
+      worker.data output_data
+      worker.complete output_data
+    , options
+
+    client = new Client options
+    count = 0
+    job = client.submitJob 'test', ""
+    job.on 'data', (handle, data) ->
+      # Make sure that all three worker data packets get processed on the same tick.
+      # This fails if they aren't
+      process.nextTick -> assert.equal count, 3
+      count = count + 1
+      assert.equal output_data, data
+    job.on 'complete', (handle, _) ->
+      worker.disconnect()
+      client.disconnect()
+      done()
+
 # describe 'worker timeout', ->
 #   it 'timeout happens before job complete', (done)->
 #     @timeout 10000
