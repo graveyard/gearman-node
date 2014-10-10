@@ -14,3 +14,9 @@ notify:
     on_started: true
     on_success: true
     on_failure: true
+publish:
+  npm:
+    email: {{email}}
+    username: {{npmdeployusername}}
+    password: {{npmdeploypassword}}
+    branch: master
