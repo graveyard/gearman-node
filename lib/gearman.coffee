@@ -172,79 +172,62 @@ class Gearman extends EventEmitter
     @socket.write body, @processCommandQueue.bind @
 
   receive: (chunk) ->
-    # allocate buffer for this chunk plus its predecessor (in the case of continuation)
-    data = new Buffer( (chunk?.length or 0) + (@remainder?.length or 0) )
-    return if not data.length
+    @remainder = if @remainder?.length then @remainder + chunk else chunk
 
-    # copy remainder into the start of the buffer
-    if @remainder
-      @remainder.copy data, 0, 0
-      chunk.copy data, @remainder.length, 0 if chunk
-    else
-      data = chunk
+    # Continue processing data until we run out of complete packets
+    while @remainder.length >= 12
 
-    # gearman responses are always >= 12 bytes (see comment in send...)
-    if data.length < 12
-      @remainder = data
-      return
+      # packet must start with \0RES
+      if (@remainder.readUInt32BE 0) isnt 0x00524553
+        return @errorHandler new Error "Out of sync with server"
 
-    # packet must start with \0RES
-    if (data.readUInt32BE 0) isnt 0x00524553
-      return @errorHandler new Error "Out of sync with server"
+      # check if the response is complete
+      bodyLength = @remainder.readUInt32BE 8
+      if @remainder.length < 12 + bodyLength
+        return
 
-    # check if the response is complete
-    bodyLength = data.readUInt32BE 8
-    if data.length < 12 + bodyLength
-      @remainder = data
-      return
+      # Extract out a single packet and keep the rest in data for the next loop
+      packet = @remainder.slice 0, 12 + bodyLength
+      # If we have no data left this will be a buffer of length 0 and fail on the next loop iteration
+      @remainder = @remainder.slice 12 + bodyLength
 
-    # check if we got a little bit of the next packet
-    @remainder = null
-    if data.length > 12 + bodyLength
-      @remainder = data.slice 12 + bodyLength
-      data = data.slice 0, 12 + bodyLength
+      commandId = packet.readUInt32BE 4
+      commandName = @packetTypesReversed[commandId]
+      assert commandName?, "unhandled command #{commandName}"
 
-    commandId = data.readUInt32BE 4
-    commandName = @packetTypesReversed[commandId]
-    assert commandName?, "unhandled command #{commandName}"
+      args = []
+      if bodyLength and argTypes = @paramCount[commandName]
+        curpos = 12
+        argpos = 12
 
-    args = []
-    if bodyLength and argTypes = @paramCount[commandName]
-      curpos = 12
-      argpos = 12
+        for argType, i in argTypes
 
-      for argType, i in argTypes
+          # read the argument from the buffer. arguments are separated by null
+          curarg = packet.slice argpos # last argument
+          if i < argTypes.length - 1
+            # find where the argument ends
+            curpos++ while packet[curpos] isnt 0x00 and curpos < packet.length
+            curarg = packet.slice argpos, curpos
 
-        # read the argument from the buffer. arguments are separated by null
-        curarg = data.slice argpos # last argument
-        if i < argTypes.length - 1
-          # find where the argument ends
-          curpos++ while data[curpos] isnt 0x00 and curpos < data.length
-          curarg = data.slice argpos, curpos
+          switch argTypes[i]
+            when "string"
+              curarg = curarg.toString "utf-8"
+            when "number"
+              curarg = Number(curarg.toString()) or 0
 
-        switch argTypes[i]
-          when "string"
-            curarg = curarg.toString "utf-8"
-          when "number"
-            curarg = Number(curarg.toString()) or 0
+          args.push curarg
+          curpos++ # for null
+          argpos = curpos
+          break if curpos >= packet.length
 
-        args.push curarg
-        curpos++ # for null
-        argpos = curpos
-        break if curpos >= data.length
+      if @debug
+        console.log "GEARMAN #{@uid}: received #{commandName} with #{args.length} arguments:"
+        console.log "\targ[#{i}]: ", "#{arg}", arg for arg, i in args
 
-    if @debug
-      console.log "GEARMAN #{@uid}: received #{commandName} with #{args.length} arguments:"
-      #console.log "\tdata: #{data}"
-      console.log "\targ[#{i}]: ", "#{arg}", arg for arg, i in args
-
-    @emit.apply @, [commandName].concat(args)
+      @emit.apply @, [commandName].concat(args)
     #@emit commandName, args
     #if typeof @["receive_#{commandName}"] is "function"
     #  #args = args.concat @handleCallbackQueue.shift() if commandName is "JOB_CREATED" and @handleCallbackQueue.length
     #  @["receive_#{commandName}"].apply @, args
-
-    # potentially saw the end of a packet plus a complete new packet
-    nextTick @receive.bind @ if @remainder and @remainder.length >= 12
 
 module.exports = Gearman
