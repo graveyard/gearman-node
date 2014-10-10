@@ -63,7 +63,8 @@ class Gearman extends EventEmitter
       SUBMIT_JOB_EPOCH   : 36
     @packetTypesReversed = {}
     @packetTypesReversed[val] = key for key, val of @packetTypes
-    @connected = @connecting = @remainder = false
+    @connected = @connecting = false
+    @remainder = new Buffer ""
     @commandQueue = []
     @handleCallbackQueue = []
     @currentJobs = {}
@@ -172,7 +173,7 @@ class Gearman extends EventEmitter
     @socket.write body, @processCommandQueue.bind @
 
   receive: (chunk) ->
-    @remainder = if @remainder?.length then @remainder + chunk else chunk
+    @remainder = Buffer.concat [@remainder, chunk]
 
     # Continue processing data until we run out of complete packets
     while @remainder.length >= 12
