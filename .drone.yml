@@ -2,6 +2,7 @@ image: node0.10
 script:
   - npm install
   - make test
+  - sleep 1000
 services:
   - rgarcia/gearmand
 notify:
