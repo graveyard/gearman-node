@@ -225,6 +225,7 @@ class Gearman extends EventEmitter
         console.log "GEARMAN #{@uid}: received #{commandName} with #{args.length} arguments:"
         console.log "\targ[#{i}]: ", "#{arg}", arg for arg, i in args
 
+      console.error "Emitting: ", commandName, @remainder.length, @remainder
       @emit.apply @, [commandName].concat(args)
     #@emit commandName, args
     #if typeof @["receive_#{commandName}"] is "function"

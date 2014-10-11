@@ -249,7 +249,7 @@ describe 'worker and client', ->
       assert.equal err, null, "should not have given error: #{err}"
       done()
 
-  it 'should process multiple packets in one tick', (done) ->
+  it.skip 'should process multiple packets in one tick', (done) ->
     @timeout 10000
     output_data = "output_data"
     worker = new Worker 'test', (payload, worker) ->
