@@ -31,7 +31,7 @@ describe 'worker and client', ->
   it 'sends/receives binary data', (done) ->
     @timeout 10000
     data1 = new Buffer([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ])
-    data2 = new Buffer([ 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255 ])
+    data2 = new Buffer "testbuffer"
     worker = new Worker 'test', (payload, worker) ->
       assert.equal payload.toString('base64'), data1.toString('base64')
       worker.complete data2
@@ -40,7 +40,7 @@ describe 'worker and client', ->
     client = new Client options
     job = client.submitJob 'test', data1
     job.on 'complete', (handle, data) ->
-      assert.equal data.toString('base64'), data2.toString('base64')
+      assert.equal data, data2
       worker.disconnect()
       client.disconnect()
       done()
