@@ -251,27 +251,22 @@ describe 'worker and client', ->
 
   it 'should process multiple packets in one tick', (done) ->
     @timeout 10000
-    output_data = "output_data"
-    worker = new Worker 'test', (payload, worker) ->
-      worker.data output_data
-      worker.data output_data
-      worker.data output_data
-      worker.complete output_data
-    , options
-
-    client = new Client options
+    gearman = new Gearman
     count = 0
-    job = client.submitJob 'test', ""
-    job.on 'data', (handle, data) ->
-      # Make sure that all three worker data packets get processed on the same tick.
-      # This fails if they aren't
-      process.nextTick -> assert.equal count, 3
+    gearman.on "WORK_DATA", (handle, data) ->
       count = count + 1
-      assert.equal output_data, data
-    job.on 'complete', ->
-      worker.disconnect()
-      client.disconnect()
-      done()
+      # Make sure we process both packets before the next tick
+      if count is 1
+        _.once process.nextTick ->
+          assert.equal count, 2
+          done()
+      assert.equal "data", data
+    buffer = new Buffer "\0RES"
+    buffer = Buffer.concat [buffer, new Buffer([0, 0, 0, 28])] # WORK_DATA
+    buffer = Buffer.concat [buffer, new Buffer([0, 0, 0, 11])] # Length
+    buffer = Buffer.concat [buffer, new Buffer("handle\0data")]
+    buffer = Buffer.concat [buffer, buffer]
+    gearman.receive buffer
 
   it 'client should handle partial packet writes', (done) ->
     @timeout 10000
