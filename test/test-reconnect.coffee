@@ -43,7 +43,7 @@ describe 'a reconnecting worker', ->
     server.listen port
     gearman = new Worker 'nothing', (payload, worker) ->
       console.log payload.toString()
-    ,{port: port, debug: true}
+    ,{port: port, debug: false}
     gearman.connect()
     
     bufferStartsWith = (buf1, buf2) ->

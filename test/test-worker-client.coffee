@@ -8,7 +8,7 @@ async = require 'async'
 options =
   host: 'localhost'
   port: 4730
-  debug: true
+  debug: false
 
 describe 'connection', ->
   gearman = null
