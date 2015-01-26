@@ -1,6 +1,6 @@
 {
   "name": "gearman-node",
-  "version": "2.0.10",
+  "version": "2.0.11",
   "description": "gearman bindings dun' right",
   "author": "Clever <dev@clever.com>",
   "repository": {
