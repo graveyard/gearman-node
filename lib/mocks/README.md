@@ -1,7 +1,7 @@
 # Mocks
 
 When testing software that depends on Gearman, it's useful to have objects that resemble the various
-`gearman-coffee` classes.
+`gearman-node` classes.
 Usually, if you're testing a Gearman worker, you'd like to avoid running a Gearman server and
 instead give it a mock to communicate with.
 If you're testing something that is a Gearman client, you'll want to mock out the response of
@@ -12,7 +12,7 @@ If you're testing something that is a Gearman client, you'll want to mock out th
 ### MockWorkers
 
 ```coffee
-{MockWorker} = require('gearman-coffee/mocks').Workers
+{MockWorker} = require('gearman-node/mocks').Workers
 worker = new MockWorker()
 worker.on 'data', console.log
 worker.on 'done', (err) ->
@@ -28,8 +28,8 @@ worker_function [0..10], worker
 
 ```coffee
 assert        = require 'assert'
-GearmanCoffee = require 'gearman-coffee'
-GearmanMocks  = require 'gearman-coffee/mocks'
+GearmanCoffee = require 'gearman-node'
+GearmanMocks  = require 'gearman-node/mocks'
 sinon         = require 'sinon'
 
 {DataJob} = GearmanMocks.Jobs
