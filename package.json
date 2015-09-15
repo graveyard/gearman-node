@@ -1,6 +1,6 @@
 {
   "name": "@clever/gearman-node",
-  "version": "2.0.11",
+  "version": "2.0.12",
   "description": "gearman bindings dun' right",
   "author": "Clever <dev@clever.com>",
   "dependencies": {
@@ -28,3 +28,4 @@
     "test": "make -B test"
   }
 }
+  
