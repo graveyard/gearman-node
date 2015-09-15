@@ -1,3 +1,7 @@
+env:
+- npm_drone_username=$$npm_drone_username
+- npm_drone_password=$$npm_drone_password
+- npm_drone_email=$$npm_drone_email
 image: node0.10
 notify:
   email:
@@ -10,13 +14,17 @@ notify:
     webhook_url: $$slack_webhook
 publish:
   npm:
-    email: $$email
-    password: $$npmdeploypassword
-    username: $$npmdeployusername
+    email: $$npm_drone_email
+    password: $$npm_drone_password
+    registry: https://registry.npmjs.org
+    username: $$npm_drone_username
     when:
       branch: master
 script:
+- npm install npm@2.7.0 -g
+- ./publish_nodejitsu.sh
 - npm install
 - make test
 services:
 - rgarcia/gearmand
+
