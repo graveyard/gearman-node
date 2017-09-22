@@ -94,6 +94,10 @@ Gearman = require './gearman'
 _ = require 'underscore'
 EventEmitter = require("events").EventEmitter
 
+class BackgroundJob extends EventEmitter
+  constructor: ->
+    super()
+
 class Client extends Gearman
   constructor: (@options) ->
     @queue = []
@@ -105,7 +109,9 @@ class Client extends Gearman
     @jobs = {} # map from job handle to emitter returned to user of this class
     @on 'JOB_CREATED', (handle) =>
       job = @queue.shift()
-      @jobs[handle] = job
+      # only track a job if it is synchronous
+      unless typeof job instanceof BackgroundJob
+        @jobs[handle] = job
       job.emit 'created', handle
     @on 'WORK_DATA',     (handle, data)     =>
       @jobs[handle].emit 'data', handle, "#{data}"
@@ -123,6 +129,12 @@ class Client extends Gearman
     job = new EventEmitter
     @queue.push job
     @sendCommand "SUBMIT_JOB", name, false, payload
+    job
+
+  submitJobBackground: (name, payload) =>
+    job = new BackgroundJob
+    @queue.push job
+    @sendCommand "SUBMIT_JOB_BG", name, false, payload
     job
 
 module.exports = Client
