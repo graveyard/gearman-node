@@ -1,0 +1,47 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/Clever/gearman-node
+    docker:
+    - image: circleci/node:8.11.3-stretch
+    environment:
+      CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
+      CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
+    steps:
+    - run:
+        command: cd $HOME && git clone --depth 1 -v https://github.com/Clever/ci-scripts.git && cd ci-scripts && git show --oneline -s
+        name: Clone ci-scripts
+    - checkout
+    - setup_remote_docker
+    - run:
+        command: sudo apt-get install gearman-job-server
+        name: Set up gearman job server
+    - run:
+        command: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
+        name: Set up CircleCI artifacts directories
+    - run:
+        command: |-
+          # download and install nvm
+          wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
+          # add NVM_DIR env var to BASH_ENV file (to load for later steps)
+          echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
+          # add NVM_DIR env var for this run command
+          export NVM_DIR="$HOME/.nvm"
+          # run nvm's script to load it for this run command
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          # install and use node 0.10 for the rest of this run command
+          nvm install 0.10
+          # actually build
+          npm install
+        name: build with node 0.10
+    - run: make test
+    - run: $HOME/ci-scripts/circleci/report-card $RC_DOCKER_USER $RC_DOCKER_PASS "$RC_DOCKER_EMAIL" $RC_GITHUB_TOKEN
+    - run:
+        command: |-
+          cd /tmp/ && wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
+          sudo apt-get update
+          sudo apt-get install python-dev
+          sudo pip install --upgrade awscli && aws --version
+          pip install --upgrade --user awscli
+        name: Install awscli for ECR publish
+    - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then $HOME/ci-scripts/circleci/npm-publish $NPM_TOKEN .; fi;
